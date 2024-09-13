@@ -1,9 +1,6 @@
 
-%% Nurbs-gen function
-function [x_curve, y_curve, z_curve] = nurbs_gen(control_points, weights, to_plot)
-
-    % Load symbolic library
-    syms s
+%% Nurbs-gen function (call `syms s` first)
+function [x_curve, y_curve, z_curve] = nurbs_gen(s, control_points, weights, to_plot)
 
     %% Define symbolic control points and weights for 3D NURBS spline
     % control_points = [0 0 0; 5 15 0; 7 5 10; 10 10 5]; % [x, y, z]
@@ -68,7 +65,7 @@ function [x_curve, y_curve, z_curve] = nurbs_gen(control_points, weights, to_plo
         hold off;
     end
     
-    %% Function to compute NURBS basis functions recursively (symbolic version)
+    %% Function to compute NURBS basis functions recursively
     function N = nurbs_basis(i, p, u, knot_vector)
         syms N;  % Ensure N is symbolic
         if p == 0
