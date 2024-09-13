@@ -43,6 +43,10 @@ function [x_curve, y_curve, z_curve] = nurbs_gen(s, control_points, weights, to_
     x_curve = x_curve / sum_weights;
     y_curve = y_curve / sum_weights;
     z_curve = z_curve / sum_weights;
+
+    x_curve = simplify(x_curve);
+    y_curve = simplify(y_curve);
+    z_curve = simplify(z_curve);
     
     %% Plot the NURBS spline
     if to_plot
