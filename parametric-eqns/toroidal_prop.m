@@ -7,6 +7,11 @@ clc;
 % Load symbolic library
 syms t s
 
+s_domain = [0, 1]; % Domain for the curve parameter s
+t_domain = [0, 2]; % Domain for the shape parameter t
+s_resolution = 100; % Resolution for discretizing the curve parameter s
+t_resolution = 1000; % Resolution for discretizing the shape parameter t
+
 %% Modifiable parameters
 
 hub_radius = 5; % Radius of the cylindrical hub
@@ -42,21 +47,6 @@ b_scY = 0;
 c_scY = 0;
 d_scY = 1;
 e_scY = 2;
-
-%% Generate Cylinder Hub
-theta_hub = linspace(0, 2*pi, 100);
-z_hub = linspace(-hub_length/2, hub_length/2, 50);
-[TH, ZH] = meshgrid(theta_hub, z_hub);
-
-X_hub = hub_radius * cos(TH);
-Y_hub = hub_radius * sin(TH);
-Z_hub = ZH;
-
-% Plot hub
-figure;
-surf(X_hub, Y_hub, Z_hub, 'FaceAlpha', 0.5, 'EdgeColor', 'none');
-hold on;
-axis equal;
 
 
 
@@ -143,25 +133,71 @@ X_final = C(1) + X_rotated_scaled * N(1) + Y_rotated_scaled * B(1);
 Y_final = C(2) + X_rotated_scaled * N(2) + Y_rotated_scaled * B(2);
 Z_final = C(3) + X_rotated_scaled * N(3) + Y_rotated_scaled * B(3);
 
-% Convert symbolic expressions to functions for numerical evaluation
-X_func = matlabFunction(X_final, 'Vars', [s, t]);
-Y_func = matlabFunction(Y_final, 'Vars', [s, t]);
-Z_func = matlabFunction(Z_final, 'Vars', [s, t]);
+%% Assemble the 3D Propeller Blade
 
-%% Numerical Evaluation and Plotting
+% Generate Cylinder Hub (parametric)
+theta_hub = linspace(0, 2*pi, 100);
+z_hub = linspace(-hub_length/2, hub_length/2, 50);
+[TH, ZH] = meshgrid(theta_hub, z_hub);
 
-% Discretize the parameters
-s_vals = linspace(0, 1);  % Values for curve parameter (s)
-t_vals = linspace(0, 2, 1000);  % Values for shape parameter (t)
+X_hub = hub_radius * cos(TH);
+Y_hub = hub_radius * sin(TH);
+Z_hub = ZH;
 
-% Evaluate the symbolic expressions numerically
-[X_mesh, T_mesh] = meshgrid(s_vals, t_vals);
-X_vals = X_func(X_mesh, T_mesh);
-Y_vals = Y_func(X_mesh, T_mesh);
-Z_vals = Z_func(X_mesh, T_mesh);
+% Plot hub
+figure;
+surf(X_hub, Y_hub, Z_hub, 'FaceAlpha', 0.5, 'EdgeColor', 'none');
+hold on;
+axis equal;
+
+% convert to cylindrical coordinates
+R = sqrt(X_final^2 + Y_final^2);
+Theta = atan2(Y_final, X_final);
+
+% create num_blades - 1 additional blades, rotating around the hub
+
+X_prop = zeros(t_resolution, s_resolution * num_blades);
+Y_prop = zeros(t_resolution, s_resolution * num_blades);
+Z_prop = zeros(t_resolution, s_resolution * num_blades);
+
+
+for i = 0:num_blades - 1
+
+    % rotate the blade by 2pi/num_blades
+    Loc_Theta = Theta + i * 2 * pi / num_blades;
+    
+    % convert back
+    X_rotated = R * cos(Loc_Theta);
+    Y_rotated = R * sin(Loc_Theta);
+
+    %% Numerical Evaluation and Plotting
+
+    % Convert symbolic expressions to functions for numerical evaluation
+    X_func = matlabFunction(X_rotated, 'Vars', [s, t]);
+    Y_func = matlabFunction(Y_rotated, 'Vars', [s, t]);
+    Z_func = matlabFunction(Z_final, 'Vars', [s, t]);
+
+    % Discretize the parameters for plotting
+    s_vals = linspace(s_domain(1), s_domain(2), s_resolution);  % Values for curve parameter (s)
+    t_vals = linspace(t_domain(1), t_domain(2), t_resolution);  % Values for shape parameter (t)
+
+    % Evaluate the symbolic expressions numerically
+    [X_mesh, T_mesh] = meshgrid(s_vals, t_vals);
+    X_vals = X_func(X_mesh, T_mesh);
+    Y_vals = Y_func(X_mesh, T_mesh);
+    Z_vals = Z_func(X_mesh, T_mesh);
+
+    X_prop(:, i * s_resolution + 1:(i + 1) * s_resolution) = X_vals;
+    Y_prop(:, i * s_resolution + 1:(i + 1) * s_resolution) = Y_vals;
+    Z_prop(:, i * s_resolution + 1:(i + 1) * s_resolution) = Z_vals;
+
+end
+
+
+size(Z_prop)
 
 % Plot the extruded prop in 3D
-surf(X_vals, Y_vals, Z_vals, 'EdgeColor', 'none');
+surf(X_prop, Y_prop, Z_prop, 'EdgeColor', 'none');
 axis equal;
 xlabel('X');
 ylabel('Y');
