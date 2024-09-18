@@ -135,21 +135,6 @@ Z_final = C(3) + X_rotated_scaled * N(3) + Y_rotated_scaled * B(3);
 
 %% Assemble the 3D Propeller Blade
 
-% Generate Cylinder Hub (parametric)
-theta_hub = linspace(0, 2*pi, 100);
-z_hub = linspace(-hub_length/2, hub_length/2, 50);
-[TH, ZH] = meshgrid(theta_hub, z_hub);
-
-X_hub = hub_radius * cos(TH);
-Y_hub = hub_radius * sin(TH);
-Z_hub = ZH;
-
-% Plot hub
-figure;
-surf(X_hub, Y_hub, Z_hub, 'FaceAlpha', 0.5, 'EdgeColor', 'none');
-hold on;
-axis equal;
-
 % convert to cylindrical coordinates
 R = sqrt(X_final^2 + Y_final^2);
 Theta = atan2(Y_final, X_final);
@@ -193,8 +178,31 @@ for i = 0:num_blades - 1
 
 end
 
+% Generate Cylinder Hub (parametric)
+theta_hub = linspace(0, 2*pi, 100);
+z_hub = linspace(-hub_length/2, hub_length/2, 50);
+[TH, ZH] = meshgrid(theta_hub, z_hub);
 
-size(Z_prop)
+X_hub = hub_radius * cos(TH);
+Y_hub = hub_radius * sin(TH);
+Z_hub = ZH;
+
+% Plot hub
+figure;
+surf(X_hub, Y_hub, Z_hub, 'FaceAlpha', 0.5, 'EdgeColor', 'none');
+hold on;
+axis equal;
+
+%% Perform Union: Remove points inside the hub
+
+% Create a mask for points inside the hub
+distance_from_origin = sqrt(X_prop.^2 + Y_prop.^2);
+inside_hub_mask = (distance_from_origin < hub_radius);
+
+% Set the points inside the hub to NaN (removes them)
+X_prop(inside_hub_mask) = NaN;
+Y_prop(inside_hub_mask) = NaN;
+Z_prop(inside_hub_mask) = NaN;
 
 % Plot the extruded prop in 3D
 surf(X_prop, Y_prop, Z_prop, 'EdgeColor', 'none');
@@ -202,5 +210,5 @@ axis equal;
 xlabel('X');
 ylabel('Y');
 zlabel('Z');
-title('Extruded Toroidal Prop Blade');
+title('Combined Propeller Blades and Hub');
 camlight; lighting phong;
