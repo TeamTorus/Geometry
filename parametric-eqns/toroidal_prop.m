@@ -193,16 +193,38 @@ surf(X_hub, Y_hub, Z_hub, 'FaceAlpha', 0.5, 'EdgeColor', 'none');
 hold on;
 axis equal;
 
-%% Perform Union: Remove points inside the hub
+% Boolean Union
+% remove all points that are inside the hub
+% convert to spherical coordinates
+% https://www.mathworks.com/help/antenna/ref/shape.custom3d.html#d126e76972
 
-% Create a mask for points inside the hub
-distance_from_origin = sqrt(X_prop.^2 + Y_prop.^2);
-inside_hub_mask = (distance_from_origin < hub_radius);
+% loop through all points
+for i = 1:size(X_prop, 1)
+    for j = 1:size(X_prop, 2)
+        if sqrt(X_prop(i, j)^2 + Y_prop(i, j)^2) < hub_radius
+            
+            % check if previous point was also inside the hub
+            if i > 1 && j > 1 && i < size(X_prop, 1) && j < size(X_prop, 2)
 
-% Set the points inside the hub to NaN (removes them)
-X_prop(inside_hub_mask) = NaN;
-Y_prop(inside_hub_mask) = NaN;
-Z_prop(inside_hub_mask) = NaN;
+                % check if it has any neighbors that are outside the hub
+                if sqrt(X_prop(i - 1, j)^2 + Y_prop(i - 1, j)^2) > hub_radius ...
+                    || sqrt(X_prop(i, j - 1)^2 + Y_prop(i, j - 1)^2) > hub_radius ...
+                    || sqrt(X_prop(i + 1, j)^2 + Y_prop(i + 1, j)^2) > hub_radius ...
+                    || sqrt(X_prop(i, j + 1)^2 + Y_prop(i, j + 1)^2) > hub_radius 
+
+                    x = X_prop(i, j);
+                else
+                    % remove the point
+                    X_prop(i, j) = NaN;
+                    Y_prop(i, j) = NaN;
+                    Z_prop(i, j) = NaN;
+                end
+            end
+
+        end
+    end
+end
+
 
 % Plot the extruded prop in 3D
 surf(X_prop, Y_prop, Z_prop, 'EdgeColor', 'none');
@@ -210,5 +232,5 @@ axis equal;
 xlabel('X');
 ylabel('Y');
 zlabel('Z');
-title('Combined Propeller Blades and Hub');
+title('Extruded Toroidal Prop Blade');
 camlight; lighting phong;
