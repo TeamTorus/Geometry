@@ -3,6 +3,7 @@
 % Clear workspace
 clear;
 clc;
+addpath(genpath('../.'));
 
 % Load symbolic library
 syms t s
@@ -67,22 +68,24 @@ y_2D = yu * heaviside(1 - t) + yl * heaviside(t - 1);
 
 %% Define the 3D Curve
 
+blade_hub_radius = hub_radius - 0.75;
+
 % pick first point
-ctrl_point1 = [hub_radius, 0, hub_length/2 - 1];
+ctrl_point1 = [blade_hub_radius, 0, hub_length/2 - 1];
 
 % for last control point, offset by blade_vector
 % blade_vector(1) represents a movement along the circumference of the hub
 % blade_vector(2) represents a movement along the z-axis
-disp_theta = blade_vector(1) / (2 * pi * hub_radius) * 2 * pi;
-ctrl_point4 = [hub_radius * cos(disp_theta), hub_radius * sin(disp_theta), -1 * blade_vector(2)];
+disp_theta = blade_vector(1) / (2 * pi * blade_hub_radius) * 2 * pi;
+ctrl_point4 = [blade_hub_radius * cos(disp_theta), blade_hub_radius * sin(disp_theta), -1 * blade_vector(2)];
 
 % Define the control points for the curve (converting to cylindrical and translating)
-disp_theta2 = loc_ctrl_point2(1) / (2 * pi * hub_radius) * 2 * pi;
-loc2_radius = hub_radius + loc_ctrl_point2(3);
+disp_theta2 = loc_ctrl_point2(1) / (2 * pi * blade_hub_radius) * 2 * pi;
+loc2_radius = blade_hub_radius + loc_ctrl_point2(3);
 ctrl_point2 = [loc2_radius * cos(disp_theta2), loc2_radius * sin(disp_theta2), -1 * loc_ctrl_point2(2)];
 
-disp_theta3 = loc_ctrl_point3(1) / (2 * pi * hub_radius) * 2 * pi;
-loc3_radius = hub_radius + loc_ctrl_point3(3);
+disp_theta3 = loc_ctrl_point3(1) / (2 * pi * blade_hub_radius) * 2 * pi;
+loc3_radius = blade_hub_radius + loc_ctrl_point3(3);
 ctrl_point3 = [loc3_radius * cos(disp_theta3), loc3_radius * sin(disp_theta3), -1 * loc_ctrl_point3(2)];
 
 control_points = [ctrl_point1; ctrl_point2; ctrl_point3; ctrl_point4]; % [x, y, z]
@@ -135,6 +138,15 @@ Z_final = C(3) + X_rotated_scaled * N(3) + Y_rotated_scaled * B(3);
 
 %% Assemble the 3D Propeller Blade
 
+% Generate Cylinder Hub (parametric)
+theta_hub = linspace(0, 2*pi, s_resolution);  % Adjust resolution to match blades
+z_hub = linspace(-hub_length/2, hub_length/2, t_resolution);  % Adjust resolution to match blades
+[TH, ZH] = meshgrid(theta_hub, z_hub);
+
+X_hub = hub_radius * cos(TH);
+Y_hub = hub_radius * sin(TH);
+Z_hub = ZH;
+
 % convert to cylindrical coordinates
 R = sqrt(X_final^2 + Y_final^2);
 Theta = atan2(Y_final, X_final);
@@ -178,23 +190,17 @@ for i = 0:num_blades - 1
 
 end
 
-% Generate Cylinder Hub (parametric)
-theta_hub = linspace(0, 2*pi, 100);
-z_hub = linspace(-hub_length/2, hub_length/2, 50);
-[TH, ZH] = meshgrid(theta_hub, z_hub);
-
-X_hub = hub_radius * cos(TH);
-Y_hub = hub_radius * sin(TH);
-Z_hub = ZH;
-
-% Plot hub
-figure;
-surf(X_hub, Y_hub, Z_hub, 'FaceAlpha', 0.5, 'EdgeColor', 'none');
-hold on;
-axis equal;
+X_tot = [X_prop, X_hub]; 
+Y_tot = [Y_prop, Y_hub];
+Z_tot = [Z_prop, Z_hub];
 
 % Plot the extruded prop in 3D
-surf(X_prop, Y_prop, Z_prop, 'EdgeColor', 'none');
+figure;
+surf(X_tot, Y_tot, Z_tot, 'EdgeColor', 'none');
+
+file_save = './outputs/' + string(floor(posixtime(datetime('now','TimeZone','local')))) + '.stl';
+surf2stl('solid.stl', X_tot, Y_tot, Z_tot);
+
 axis equal;
 xlabel('X');
 ylabel('Y');
