@@ -20,9 +20,9 @@ hub_length = 20; % Length of the cylindrical hub
 num_blades = 3; % Number of blades
 
 % Airfoil Params
-thickness = 0.5;
 m = 0.02;
 p = 0.4;
+thickness = 0.5;
 
 % Centerline Params
 loc_ctrl_point2 = [3 3 10];
@@ -68,7 +68,7 @@ y_2D = yu * heaviside(1 - t) + yl * heaviside(t - 1);
 
 %% Define the 3D Curve
 
-blade_hub_radius = hub_radius - 0.75;
+blade_hub_radius = hub_radius - hub_radius / 8;
 
 % pick first point
 ctrl_point1 = [blade_hub_radius, 0, hub_length/2 - 1];

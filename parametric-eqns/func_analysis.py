@@ -7,12 +7,12 @@ import matplotlib.pyplot as plt
 # define function types to randomly generate
 def random_sinusoidal(x):
     amplitude = random.uniform(0.5, 2)
-    frequency = random.uniform(1, 2)
+    frequency = random.uniform(1, 3)
     phase = random.uniform(0, np.pi)
     return amplitude * np.sin(2 * np.pi * frequency * x + phase)
 
 def random_polynomial(x):
-    degree = random.randint(1, 5)  # Random degree polynomial between 2 and 5
+    degree = random.randint(1, 8)  # Random degree polynomial between 2 and 5
     coefficients = [random.uniform(-2, 2) for _ in range(degree + 1)]
     return sum(c * x**i for i, c in enumerate(coefficients))
 
@@ -48,16 +48,25 @@ def generate_random_function(x):
 def poly4(x, a, b, c, d, e):
     return a * x**4 + b * x**3 + c * x**2 + d * x + e
 
+def poly5(x, a, b, c, d, e, f):
+    return a * x**5 + b * x**4 + c * x**3 + d * x**2 + e * x + f
+
+def poly6(x, a, b, c, d, e, f, g):
+    return a * x**6 + b * x**5 + c * x**4 + d * x**3 + e * x**2 + f * x + g
+
 # N=2 Fourier Series function to fit
 def fourier2(x, A1, B1, A2, B2, A0):
     return A0 + A1 * np.cos(2 * np.pi * x) + B1 * np.sin(2 * np.pi * x) + A2 * np.cos(4 * np.pi * x) + B2 * np.sin(4 * np.pi * x)
+
+def fourier3(x, A1, B1, A2, B2, A3, B3, A0):
+    return A0 + A1 * np.cos(2 * np.pi * x) + B1 * np.sin(2 * np.pi * x) + A2 * np.cos(4 * np.pi * x) + B2 * np.sin(4 * np.pi * x) + A3 * np.cos(6 * np.pi * x) + B3 * np.sin(6 * np.pi * x)
 
 def sinusoidal(x, a, b, c, d):
     return a * np.sin(b * x + c) + d
 
 fitting_functions = {
-    "polynomial": poly4,
-    "fourier": fourier2,
+    "polynomial": poly6,
+    "fourier": fourier3,
     "sinusoidal": sinusoidal
 }
 
