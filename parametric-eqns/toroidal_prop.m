@@ -1,4 +1,4 @@
-% Symbolic 3D extrusion of a 2D airfoil shape along a 3D curve using the Joukowsky transform
+% Symbolic 3D extrusion of a 2D airfoil shape along a 3D curve
 
 % Clear workspace
 clear;
