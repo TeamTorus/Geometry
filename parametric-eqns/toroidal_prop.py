@@ -15,9 +15,10 @@ s_domain = [0, 1]  # Domain for the curve parameter s
 t_domain = [0, 2]  # Domain for the shape parameter t
 s_resolution = 100  # Resolution for discretizing the curve parameter s
 t_resolution = 100  # Resolution for discretizing the shape parameter t
+hub_resolution = 50 # Resolution for discretizing the hub (needs to equal s_resolution for matplotlib viz)
 
 normalize_blade_mesh = True
-hub_resolution_scale = 2        # Hub resolution is 1/2 of blade resolution (needs to be 1 for matplotlib viz)
+apply_thickness_normal = False
 
 # Modifiable parameters
 hub_radius = 5  # Radius of the cylindrical hub
@@ -58,15 +59,24 @@ e_scY = 2
 # https://en.wikipedia.org/wiki/NACA_airfoil
 
 yt = 5 * thickness * (0.2969 * sp.sqrt(t) - 0.1260 * t - 0.3516 * t**2 + 0.2843 * t**3 - 0.1036 * t**4)
-yc = (m / p**2) * (2 * p * t - t**2) * sp.Piecewise((1, t <= p), (0, t > p)) + (m / (1 - p)**2) * ((1 - 2 * p) + 2 * p * t - t**2) * sp.Piecewise((1, t > p), (0, t <= p))
-yu = yt + yc
+yc = sp.Piecewise(((m / p**2) * (2 * p * t - t**2), t <= p), ((m / (1 - p)**2) * ((1 - 2 * p) + 2 * p * t - t**2), t > p))
 
-# domain shift
-yl_1 = yc - yt
+if apply_thickness_normal:
+    # define camber normals for proper thickness distribution
+    dyc_dt = sp.Piecewise((2*m/p**2 * (p - t), t <= p), (2*m/(1 - p)**2 * (p - t), t > p))
+    theta_c = sp.atan(dyc_dt)
+else:
+    theta_c = 0
+
+# apply camber + thickness
+yu = yc + yt * sp.cos(theta_c)
+yl_1 = yc - yt * sp.cos(theta_c)
+
+xu = t - yt * sp.sin(theta_c)
+xl = (2 - t) + yt * sp.sin(theta_c)             # 2-t for the t domain shift
+
+# domain shift for two halves of the airfoil 
 yl = yl_1.subs(t, (2 - t))
-
-xu = t
-xl = 2 - t
 
 # use activations for upper/lower
 y_2D = yu * sp.Heaviside(1 - t) + yl * sp.Heaviside(t - 1)
@@ -196,13 +206,10 @@ print(X_final)
 
 # -------------------------------------- PT 5: Assemble the 3D Propeller  --------------------------------------
 
-# hollistic scaling, but hub cell res should be 1/2 of blade cell res
-hub_res = s_resolution // hub_resolution_scale
-
 # Generate Cylinder Hub (parametric)
-z_hub = np.linspace(-hub_length / 2, hub_length / 2, hub_res)
+z_hub = np.linspace(-hub_length / 2, hub_length / 2, hub_resolution)
 # want the have the hub have square grids
-z_res_size = hub_length / hub_res
+z_res_size = hub_length / hub_resolution
 theta_resolution = hub_radius * 2 * np.pi // z_res_size
 theta_hub = np.linspace(0, 2 * np.pi, int(theta_resolution))
 TH, ZH = np.meshgrid(theta_hub, z_hub)
