@@ -147,8 +147,11 @@ print(X_final)
 
 
 # Generate Cylinder Hub (parametric)
-theta_hub = np.linspace(0, 2 * np.pi, s_resolution)
-z_hub = np.linspace(-hub_length / 2, hub_length / 2, t_resolution)
+z_hub = np.linspace(-hub_length / 2, hub_length / 2, s_resolution)
+# want the have the hub have square grids
+z_res_size = hub_length / s_resolution
+theta_resolution = hub_radius * 2 * np.pi // z_res_size
+theta_hub = np.linspace(0, 2 * np.pi, int(theta_resolution))
 TH, ZH = np.meshgrid(theta_hub, z_hub)
 
 X_hub = hub_radius * np.cos(TH)
@@ -200,15 +203,15 @@ Y_tot = np.hstack((Y_prop, Y_hub))
 Z_tot = np.hstack((Z_prop, Z_hub))
 
 # Visualize the assembled propeller in 3D
-fig = plt.figure()
-ax = fig.add_subplot(111, projection='3d')
-ax.plot_surface(X_tot, Y_tot, Z_tot, cmap='viridis', edgecolor='none')
+# fig = plt.figure()
+# ax = fig.add_subplot(111, projection='3d')
+# ax.plot_surface(X_tot, Y_tot, Z_tot, cmap='viridis', edgecolor='none')
 
-ax.set_xlabel('X')
-ax.set_ylabel('Y')
-ax.set_zlabel('Z')
-ax.set_title('Extruded Toroidal Propeller with Multiple Blades')
-plt.show()
+# ax.set_xlabel('X')
+# ax.set_ylabel('Y')
+# ax.set_zlabel('Z')
+# ax.set_title('Extruded Toroidal Propeller with Multiple Blades')
+# plt.show()
 
 #------------------------ PT 2 ------------------------
 def create_mesh_from_grids(X, Y, Z):
@@ -250,6 +253,7 @@ final_mesh = final_mesh.fill_holes(1, inplace=True)  # fill small mesh holes idk
 
 
 final_mesh.plot_normals(mag=0.25, show_edges=True)
+# final_mesh.plot(show_edges=True)
 
 # export the final mesh to STL
 final_mesh.save('toroidal_propeller.stl')
