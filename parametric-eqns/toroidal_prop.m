@@ -11,7 +11,7 @@ syms t s
 s_domain = [0, 1]; % Domain for the curve parameter s
 t_domain = [0, 2]; % Domain for the shape parameter t
 s_resolution = 100; % Resolution for discretizing the curve parameter s
-t_resolution = 1000; % Resolution for discretizing the shape parameter t
+t_resolution = 100; % Resolution for discretizing the shape parameter t
 
 %% Modifiable parameters
 
@@ -196,7 +196,7 @@ Z_tot = [Z_prop, Z_hub];
 
 % Plot the extruded prop in 3D
 figure;
-surf(X_tot, Y_tot, Z_tot, 'EdgeColor', 'none');
+surf(X_tot, Y_tot, Z_tot);
 
 file_save = './outputs/' + string(floor(posixtime(datetime('now','TimeZone','local')))) + '.stl';
 surf2stl('solid.stl', X_tot, Y_tot, Z_tot);

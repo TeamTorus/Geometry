@@ -1,5 +1,5 @@
 
-%% Nurbs-gen function (call `syms s` first)
+%% Nurbs-gen function (call `syms s` first and pass it in as the parameter)
 function [x_curve, y_curve, z_curve] = nurbs_gen(s, control_points, weights, to_plot)
 
     %% Define symbolic control points and weights for 3D NURBS spline
