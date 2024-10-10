@@ -206,33 +206,69 @@ Z_final = C[2] + X_rotated_scaled * N[2] + Y_rotated_scaled * B[2]
 print("X_final:")
 print(X_final)
 
-# Define a mapping for the Heaviside function
-heaviside = lambda x: np.heaviside(x, 0.5)
 
-# Lambdify the expressions with custom mapping
-X_func = sp.lambdify((s, t), X_final, modules=['numpy', {'Heaviside': heaviside}])
-Y_func = sp.lambdify((s, t), Y_final, modules=['numpy', {'Heaviside': heaviside}])
-Z_func = sp.lambdify((s, t), Z_final, modules=['numpy', {'Heaviside': heaviside}])
+# Generate Cylinder Hub (parametric)
+theta_hub = np.linspace(0, 2 * np.pi, s_resolution)
+z_hub = np.linspace(-hub_length / 2, hub_length / 2, t_resolution)
+TH, ZH = np.meshgrid(theta_hub, z_hub)
 
-# Create meshgrid for s and t
-s_vals = np.linspace(s_domain[0], s_domain[1], s_resolution)
-t_vals = np.linspace(t_domain[0], t_domain[1], t_resolution)
-s_mesh, t_mesh = np.meshgrid(s_vals, t_vals)
+X_hub = hub_radius * np.cos(TH)
+Y_hub = hub_radius * np.sin(TH)
+Z_hub = ZH
 
-print("s_mesh:")
-print(s_mesh)
+# Convert to cylindrical coordinates
+R = sp.sqrt(X_final**2 + Y_final**2)
+Theta = sp.atan2(Y_final, X_final)
 
-# Evaluate the functions on the meshgrid
-X_vals = X_func(s_mesh, t_mesh)
-Y_vals = Y_func(s_mesh, t_mesh)
-Z_vals = Z_func(s_mesh, t_mesh)
+# Create arrays for storing all blades
+X_prop = np.zeros((t_resolution, s_resolution * num_blades))
+Y_prop = np.zeros((t_resolution, s_resolution * num_blades))
+Z_prop = np.zeros((t_resolution, s_resolution * num_blades))
 
-# Visualize the 3D blade
+# Generate multiple blades around the hub
+for i in range(num_blades):
+    # Rotate the blade by 2pi/num_blades
+    Loc_Theta = Theta + i * 2 * np.pi / num_blades
+
+    # Convert back to Cartesian coordinates
+    X_rotated = R * sp.cos(Loc_Theta)
+    Y_rotated = R * sp.sin(Loc_Theta)
+
+    # Convert symbolic expressions to numerical functions
+    X_func = sp.lambdify((s, t), X_rotated, modules=['numpy', {'Heaviside': np.heaviside}])
+    Y_func = sp.lambdify((s, t), Y_rotated, modules=['numpy', {'Heaviside': np.heaviside}])
+    Z_func = sp.lambdify((s, t), Z_final, modules=['numpy', {'Heaviside': np.heaviside}])
+
+    # Discretize the parameters for plotting
+    s_vals = np.linspace(s_domain[0], s_domain[1], s_resolution)
+    t_vals = np.linspace(t_domain[0], t_domain[1], t_resolution)
+    s_mesh, t_mesh = np.meshgrid(s_vals, t_vals)
+
+    # Evaluate the symbolic expressions numerically
+    X_vals = X_func(s_mesh, t_mesh)
+    Y_vals = Y_func(s_mesh, t_mesh)
+    Z_vals = Z_func(s_mesh, t_mesh)
+
+    # Store the rotated blade's coordinates
+    X_prop[:, i * s_resolution:(i + 1) * s_resolution] = X_vals
+    Y_prop[:, i * s_resolution:(i + 1) * s_resolution] = Y_vals
+    Z_prop[:, i * s_resolution:(i + 1) * s_resolution] = Z_vals
+
+# Combine the hub and blades into a single array for visualization
+X_tot = np.hstack((X_prop, X_hub))
+Y_tot = np.hstack((Y_prop, Y_hub))
+Z_tot = np.hstack((Z_prop, Z_hub))
+
+# Visualize the assembled propeller in 3D
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
-ax.plot_surface(X_vals, Y_vals, Z_vals, cmap='viridis', edgecolor='none')
+ax.plot_surface(X_tot, Y_tot, Z_tot, cmap='viridis', edgecolor='none')
+
+# Set axis labels and title
 ax.set_xlabel('X')
 ax.set_ylabel('Y')
 ax.set_zlabel('Z')
-ax.set_title('3D Blade Visualization')
+ax.set_title('Extruded Toroidal Propeller with Multiple Blades')
+
+# Show the plot
 plt.show()
