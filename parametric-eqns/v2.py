@@ -3,8 +3,10 @@ import numpy as np
 import sympy as sp
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+import pyvista as pv
 
-# Define symbolic variables
+
+# symbolic variables
 t, s = sp.symbols('t s', real=True)
 
 # Domain and resolution
@@ -48,7 +50,7 @@ c_scY = 0
 d_scY = 1
 e_scY = 2
 
-# Define the 2D Shape
+# define the 2D Shape
 # https://en.wikipedia.org/wiki/NACA_airfoil
 x_2D = t * sp.Heaviside(1 - t) + (2 - t) * sp.Heaviside(t - 1)
 
@@ -56,14 +58,14 @@ yt = 5 * thickness * (0.2969 * sp.sqrt(t) - 0.1260 * t - 0.3516 * t**2 + 0.2843 
 yc = (m / p**2) * (2 * p * t - t**2) * sp.Heaviside(p - t) + (m / (1 - p)**2) * ((1 - 2 * p) + 2 * p * t - t**2) * sp.Heaviside(t - p)
 yu = yt + yc
 
-# Domain shift
+# domain shift
 yl_1 = yc - yt
 yl = yl_1.subs(t, (2 - t))
 
-# Use activations for upper/lower
+# use activations for upper/lower
 y_2D = yu * sp.Heaviside(1 - t) + yl * sp.Heaviside(t - 1)
 
-# Define the 3D Curve
+# define the 3D Curve
 
 blade_hub_radius = hub_radius - hub_radius / 8
 
@@ -87,18 +89,16 @@ ctrl_point3 = [loc3_radius * np.cos(disp_theta3), loc3_radius * np.sin(disp_thet
 
 control_points = np.array([ctrl_point1, ctrl_point2, ctrl_point3, ctrl_point4])  # [x, y, z]
 
-# NURBS generation function
+# NURBS generation function (translated from MATLAB)
 def nurbs_gen(s, control_points, weights, to_plot=False):
-    # Degree of the NURBS curve (cubic)
+    # cubic nurbs
     degree = 3
 
     # Knot vector for NURBS curve (for degree 3 with clamped ends)
     knot_vector = np.array([0, 0, 0, 0, 1, 1, 1, 1])
 
-    # Number of control points
     n = len(control_points) - 1
 
-    # Define the NURBS basis function recursively
     def nurbs_basis(i, p, u, knot_vector):
         if p == 0:
             return sp.Piecewise((1, (u >= knot_vector[i]) & (u < knot_vector[i+1])), (0, True))
@@ -152,7 +152,7 @@ def nurbs_gen(s, control_points, weights, to_plot=False):
 
     return x_curve, y_curve, z_curve
 
-# Generate the NURBS curve
+# could add weights as a parameter, but for now just use uniform weights
 weights = [1, 1, 1, 1]
 x_curve, y_curve, z_curve = nurbs_gen(s, control_points, weights, to_plot=False)
 
@@ -174,18 +174,18 @@ N = dT_ds / N_norm
 # Binormal vector (B) is the cross product of T and N
 B = T.cross(N)
 
-# Define Rotation Angle based on curve parameter s
+# rotation angle function of s
 AoA = a_AoA * s**4 + b_AoA * s**3 + c_AoA * s**2 + d_AoA * s + e_AoA
 
-# Define the rotation matrix (counterclockwise in the local x-y plane)
+# counterclockwise in the local x-y plane
 rotation_matrix = sp.Matrix([[sp.cos(AoA), -sp.sin(AoA)], [sp.sin(AoA), sp.cos(AoA)]])
 
-# Rotate the 2D shape symbolically
-XY_rotated = rotation_matrix * sp.Matrix([x_2D, y_2D])  # Apply rotation
+# apply rotation
+XY_rotated = rotation_matrix * sp.Matrix([x_2D, y_2D]) 
 X_rotated = XY_rotated[0]
 Y_rotated = XY_rotated[1]
 
-# Define symbolic scaling/stretching functions (parametric by s)
+# scaling/stretching functions (parametric by s) ~ approximates airfoil rotation transformations
 scale_x = a_scX * s**4 + b_scX * s**3 + c_scX * s**2 + d_scX * s + e_scX  # Parametric scaling for x
 scale_y = a_scY * s**4 + b_scY * s**3 + c_scY * s**2 + d_scY * s + e_scY  # Parametric scaling for y
 
@@ -216,45 +216,46 @@ X_hub = hub_radius * np.cos(TH)
 Y_hub = hub_radius * np.sin(TH)
 Z_hub = ZH
 
-# Convert to cylindrical coordinates
+# convert to cylindrical coordinates
 R = sp.sqrt(X_final**2 + Y_final**2)
 Theta = sp.atan2(Y_final, X_final)
 
-# Create arrays for storing all blades
+# create arrays for storing all blades
 X_prop = np.zeros((t_resolution, s_resolution * num_blades))
 Y_prop = np.zeros((t_resolution, s_resolution * num_blades))
 Z_prop = np.zeros((t_resolution, s_resolution * num_blades))
 
-# Generate multiple blades around the hub
+# generate multiple blades around the hub
 for i in range(num_blades):
-    # Rotate the blade by 2pi/num_blades
+    # rotate the blade by 2pi/num_blades
     Loc_Theta = Theta + i * 2 * np.pi / num_blades
 
-    # Convert back to Cartesian coordinates
+    # Cartesian coordinates
     X_rotated = R * sp.cos(Loc_Theta)
     Y_rotated = R * sp.sin(Loc_Theta)
 
-    # Convert symbolic expressions to numerical functions
+    # convert to evaluatable lambdas
     X_func = sp.lambdify((s, t), X_rotated, modules=['numpy', {'Heaviside': np.heaviside}])
     Y_func = sp.lambdify((s, t), Y_rotated, modules=['numpy', {'Heaviside': np.heaviside}])
     Z_func = sp.lambdify((s, t), Z_final, modules=['numpy', {'Heaviside': np.heaviside}])
 
-    # Discretize the parameters for plotting
+    # discretize the parameters now, it makes it easier
+    # TODO: get symbolic expression for all 3 blades, do a domain rescale or shift with heavisides to get the 3
     s_vals = np.linspace(s_domain[0], s_domain[1], s_resolution)
     t_vals = np.linspace(t_domain[0], t_domain[1], t_resolution)
     s_mesh, t_mesh = np.meshgrid(s_vals, t_vals)
 
-    # Evaluate the symbolic expressions numerically
+    # evaluate it on the meshgrid
     X_vals = X_func(s_mesh, t_mesh)
     Y_vals = Y_func(s_mesh, t_mesh)
     Z_vals = Z_func(s_mesh, t_mesh)
 
-    # Store the rotated blade's coordinates
+    # stack them horizontally
     X_prop[:, i * s_resolution:(i + 1) * s_resolution] = X_vals
     Y_prop[:, i * s_resolution:(i + 1) * s_resolution] = Y_vals
     Z_prop[:, i * s_resolution:(i + 1) * s_resolution] = Z_vals
 
-# Combine the hub and blades into a single array for visualization
+# Combine the hub and blades into a single array
 X_tot = np.hstack((X_prop, X_hub))
 Y_tot = np.hstack((Y_prop, Y_hub))
 Z_tot = np.hstack((Z_prop, Z_hub))
@@ -264,11 +265,54 @@ fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
 ax.plot_surface(X_tot, Y_tot, Z_tot, cmap='viridis', edgecolor='none')
 
-# Set axis labels and title
 ax.set_xlabel('X')
 ax.set_ylabel('Y')
 ax.set_zlabel('Z')
 ax.set_title('Extruded Toroidal Propeller with Multiple Blades')
-
-# Show the plot
 plt.show()
+
+#------------------------ PT 2 ------------------------
+def create_mesh_from_grids(X, Y, Z):
+    # Flatten the grid arrays
+    points = np.column_stack((X.ravel(), Y.ravel(), Z.ravel()))
+
+    mesh = pv.PolyData(points)
+    # generate faces from the grid
+    nx, ny = X.shape
+    faces = []
+
+    for i in range(nx - 1):
+        for j in range(ny - 1):
+            idx0 = i * ny + j
+            idx1 = idx0 + 1
+            idx2 = idx0 + ny + 1
+            idx3 = idx0 + ny
+            faces.extend([4, idx0, idx1, idx2, idx3])
+
+    # faces list to NumPy array
+    faces = np.array(faces)
+    mesh.faces = faces
+
+    # triangulate grid mesh (it don't like quads)
+    mesh = mesh.triangulate()
+    return mesh
+
+mesh_blades = create_mesh_from_grids(X_prop, Y_prop, Z_prop)
+mesh_hub = create_mesh_from_grids(X_hub, Y_hub, Z_hub)
+
+print("Blades mesh is manifold:", mesh_blades.is_manifold)
+print("Hub mesh is manifold:", mesh_hub.is_manifold)
+
+mesh_hub_m = mesh_hub.fill_holes(100).clean()
+mesh_blades_m = mesh_blades.fill_holes(100).clean()
+
+final_mesh = mesh_hub.boolean_union(mesh_blades, tolerance=1e-5).clean()
+final_mesh = final_mesh.fill_holes(1, inplace=True)  # fill small mesh holes idk y they here
+
+
+final_mesh.plot_normals(mag=0.25, show_edges=True)
+
+# export the final mesh to STL
+final_mesh.save('toroidal_propeller.stl')
+
+
