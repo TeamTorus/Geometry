@@ -17,8 +17,9 @@ s_resolution = 100  # Resolution for discretizing the curve parameter s
 t_resolution = 100  # Resolution for discretizing the shape parameter t
 hub_resolution = 50 # Resolution for discretizing the hub (needs to equal s_resolution for matplotlib viz)
 
-normalize_blade_mesh = True
-apply_thickness_normal = False
+normalize_blade_mesh = False        # Normalize the blade mesh to have uniform arc length wrt t
+apply_thickness_normal = False      # Apply airfoil thickness normal to camber line
+close_cylinder = True               # Close the cylinder mesh for the hub with top and bottom faces
 
 # Modifiable parameters
 hub_radius = 5  # Radius of the cylindrical hub
@@ -206,17 +207,23 @@ print(X_final)
 
 # -------------------------------------- PT 5: Assemble the 3D Propeller  --------------------------------------
 
-# Generate Cylinder Hub (parametric)
-z_hub = np.linspace(-hub_length / 2, hub_length / 2, hub_resolution)
-# want the have the hub have square grids
-z_res_size = hub_length / hub_resolution
-theta_resolution = hub_radius * 2 * np.pi // z_res_size
-theta_hub = np.linspace(0, 2 * np.pi, int(theta_resolution))
-TH, ZH = np.meshgrid(theta_hub, z_hub)
+def generate_cylinder_mesh(radius, length, resolution):
+    # Create a grid of points for the cylinder
+    theta_vals = np.linspace(0, 2 * np.pi, resolution)
+    z_vals = np.linspace(-length / 2, length / 2, resolution)
 
-X_hub = hub_radius * np.cos(TH)
-Y_hub = hub_radius * np.sin(TH)
-Z_hub = ZH
+    # Create the meshgrid
+    theta_mesh, z_mesh = np.meshgrid(theta_vals, z_vals)
+
+    # Convert to Cartesian coordinates
+    X = radius * np.cos(theta_mesh)
+    Y = radius * np.sin(theta_mesh)
+    Z = z_mesh
+
+    return X, Y, Z
+
+# Generate the hub mesh
+X_hub, Y_hub, Z_hub = generate_cylinder_mesh(hub_radius, hub_length, hub_resolution)
 
 # convert to cylindrical coordinates
 R = sp.sqrt(X_final**2 + Y_final**2)
@@ -299,8 +306,54 @@ def create_mesh_from_grids(X, Y, Z):
     mesh = mesh.triangulate()
     return mesh
 
+def close_cylinder_mesh(X, Y, Z):
+    # Flatten the grid arrays
+    points = np.column_stack((X.ravel(), Y.ravel(), Z.ravel()))
+
+    nx, ny = X.shape
+    faces = []
+
+    for i in range(nx - 1):
+        for j in range(ny):
+            idx0 = i * ny + j
+            idx1 = i * ny + (j + 1) % ny
+            idx2 = (i + 1) * ny + (j + 1) % ny
+            idx3 = (i + 1) * ny + j
+            faces.extend([4, idx0, idx1, idx2, idx3])
+
+    # center points for top and bottom faces
+    top_center = np.array([[0, 0, Z.max()]])
+    bottom_center = np.array([[0, 0, Z.min()]])
+    points = np.vstack((points, top_center, bottom_center))
+    idx_top_center = len(points) - 2
+    idx_bottom_center = len(points) - 1
+
+    # Indices of top and bottom circle points
+    idx_top = (nx - 1) * ny + np.arange(ny)
+    idx_bottom = 0 * ny + np.arange(ny)
+
+    # Create faces for the top cap
+    for j in range(ny):
+        idx0 = idx_top[j]
+        idx1 = idx_top[(j + 1) % ny]
+        faces.extend([3, idx0, idx1, idx_top_center])
+
+    # Create faces for the bottom cap
+    for j in range(ny):
+        idx0 = idx_bottom[j]
+        idx1 = idx_bottom[(j + 1) % ny]
+        faces.extend([3, idx_bottom_center, idx1, idx0])
+
+    faces = np.array(faces)
+
+    mesh = pv.PolyData(points)
+    mesh.faces = faces
+
+    mesh = mesh.triangulate()
+    return mesh
+
 mesh_blades = create_mesh_from_grids(X_prop, Y_prop, Z_prop)
-mesh_hub = create_mesh_from_grids(X_hub, Y_hub, Z_hub)
+mesh_hub = close_cylinder_mesh(X_hub, Y_hub, Z_hub)
 
 print("Blades mesh is manifold:", mesh_blades.is_manifold)
 print("Hub mesh is manifold:", mesh_hub.is_manifold)
@@ -308,12 +361,13 @@ print("Hub mesh is manifold:", mesh_hub.is_manifold)
 mesh_hub_m = mesh_hub.fill_holes(100).clean()
 mesh_blades_m = mesh_blades.fill_holes(100).clean()
 
-final_mesh = mesh_hub.boolean_union(mesh_blades, tolerance=1e-5).clean()
-final_mesh = final_mesh.fill_holes(1, inplace=True)  # fill small mesh holes idk y they here
+
+final_mesh = mesh_hub_m.boolean_union(mesh_blades, tolerance=1e-4)
+final_mesh = final_mesh.fill_holes(3, inplace=True)  # fill small mesh holes idk y they here
 
 
-# final_mesh.plot_normals(mag=0.25, show_edges=True)
-final_mesh.plot(show_edges=True)
+final_mesh.plot_normals(mag=0.25, show_edges=True)
+# final_mesh.plot(show_edges=True)
 
 # export the final mesh to STL
 final_mesh.save('toroidal_propeller.stl')
