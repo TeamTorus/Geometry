@@ -65,8 +65,10 @@ def sinusoidal(x, a, b, c, d):
     return a * np.sin(b * x + c) + d
 
 fitting_functions = {
-    "polynomial": poly6,
-    "fourier": fourier3,
+    "polynomial4": poly4,
+    "polynomial6": poly6,
+    "fourier2": fourier2,
+    "fourier3": fourier3,
     "sinusoidal": sinusoidal
 }
 
@@ -95,7 +97,7 @@ def fit_models(x_data, y_data):
 
     return fit_outputs
 
-n_samples = 500
+n_samples = 10000
 n_points = 100  # Number of test data points
 
 # dictionary comprehension to store errors
