@@ -20,6 +20,7 @@ hub_resolution = 50 # Resolution for discretizing the hub (needs to equal s_reso
 normalize_blade_mesh = False        # Normalize the blade mesh to have uniform arc length wrt t
 apply_thickness_normal = False      # Apply airfoil thickness normal to camber line
 close_cylinder = True               # Close the cylinder mesh for the hub with top and bottom faces
+plot_matplotlib = True             # Plot the propeller in matplotlib
 
 # Modifiable parameters
 hub_radius = 5  # Radius of the cylindrical hub
@@ -33,14 +34,14 @@ thickness = 0.5
 
 # Centerline Params
 loc_ctrl_point2 = [3, 3, 10]
-loc_ctrl_point3 = [7, 6, 8]
+loc_ctrl_point3 = [7, 6, 15]
 blade_vector = [8, 8]   # offset between the two endpoints
 
 # Angle of Attack
 a_AoA = 0
 b_AoA = 0
 c_AoA = 0
-d_AoA = 2 * np.pi
+d_AoA = 1 * np.pi
 e_AoA = 0
 
 # Scaling Params
@@ -81,7 +82,7 @@ yl = yl_1.subs(t, (2 - t))
 
 # use activations for upper/lower
 y_2D = yu * sp.Heaviside(1 - t) + yl * sp.Heaviside(t - 1)
-x_2D = xu * sp.Heaviside(1 - t) + xl * sp.Heaviside(t - 1)
+x_2D = xu * sp.Heaviside(1 - t) + xl * sp.Heaviside(t - 1) - 0.5        # shift airfoil to be origin-centered
 
 # rotation angle function of s
 AoA = a_AoA * s**4 + b_AoA * s**3 + c_AoA * s**2 + d_AoA * s + e_AoA
@@ -148,7 +149,7 @@ s_vals = np.linspace(s_domain[0], s_domain[1], s_resolution)
 
 # ------------------------------------------ PT 3: Create the 3D curve  ------------------------------------------
 
-blade_hub_radius = hub_radius - hub_radius / 8
+blade_hub_radius = hub_radius - hub_radius / 4
 
 # Pick first point
 ctrl_point1 = [blade_hub_radius, 0, hub_length / 2 - 1]
@@ -167,6 +168,8 @@ ctrl_point2 = [loc2_radius * np.cos(disp_theta2), loc2_radius * np.sin(disp_thet
 disp_theta3 = loc_ctrl_point3[0] / (2 * np.pi * blade_hub_radius) * 2 * np.pi
 loc3_radius = blade_hub_radius + loc_ctrl_point3[2]
 ctrl_point3 = [loc3_radius * np.cos(disp_theta3), loc3_radius * np.sin(disp_theta3), -1 * loc_ctrl_point3[1]]
+
+print(ctrl_point1, ctrl_point2, ctrl_point3, ctrl_point4)
 
 control_points = np.array([ctrl_point1, ctrl_point2, ctrl_point3, ctrl_point4])  # [x, y, z]
 
@@ -202,9 +205,6 @@ X_final = C[0] + X_rotated_scaled * N[0] + Y_rotated_scaled * B[0]
 Y_final = C[1] + X_rotated_scaled * N[1] + Y_rotated_scaled * B[1]
 Z_final = C[2] + X_rotated_scaled * N[2] + Y_rotated_scaled * B[2]
 
-print("X_final:")
-print(X_final)
-
 # -------------------------------------- PT 5: Assemble the 3D Propeller  --------------------------------------
 
 def generate_cylinder_mesh(radius, length, resolution):
@@ -223,7 +223,7 @@ def generate_cylinder_mesh(radius, length, resolution):
     return X, Y, Z
 
 # Generate the hub mesh
-X_hub, Y_hub, Z_hub = generate_cylinder_mesh(hub_radius, hub_length, hub_resolution)
+X_hub, Y_hub, Z_hub = generate_cylinder_mesh(hub_radius, hub_length, (s_resolution if plot_matplotlib else hub_resolution))
 
 # convert to cylindrical coordinates
 R = sp.sqrt(X_final**2 + Y_final**2)
@@ -264,21 +264,25 @@ for i in range(num_blades):
 
 
 # -------------------------------- PT 6: Visualize the propeller in matplotlib  --------------------------------
-# # Combine the hub and blades into a single array
-# X_tot = np.hstack((X_prop, X_hub))
-# Y_tot = np.hstack((Y_prop, Y_hub))
-# Z_tot = np.hstack((Z_prop, Z_hub))
+if plot_matplotlib: 
+    # Combine the hub and blades into a single array
+    X_tot = np.hstack((X_prop, X_hub))
+    Y_tot = np.hstack((Y_prop, Y_hub))
+    Z_tot = np.hstack((Z_prop, Z_hub))
 
-# # Visualize the assembled propeller in 3D
-# fig = plt.figure()
-# ax = fig.add_subplot(111, projection='3d')
-# ax.plot_surface(X_tot, Y_tot, Z_tot, cmap='viridis', edgecolor='none')
+    # Visualize the assembled propeller in 3D
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.plot_surface(X_tot, Y_tot, Z_tot, cmap='viridis', edgecolor='none')
 
-# ax.set_xlabel('X')
-# ax.set_ylabel('Y')
-# ax.set_zlabel('Z')
-# ax.set_title('Extruded Toroidal Propeller with Multiple Blades')
-# plt.show()
+    # plot the control points
+    ax.scatter(control_points[:, 0], control_points[:, 1], control_points[:, 2], c='r', s=10, label='Control Points')
+
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    ax.set_title('Extruded Toroidal Propeller with Multiple Blades')
+    plt.show()
 
 # --------------------------------------- PT 7: Boolean it with PyVista  ---------------------------------------
 def create_mesh_from_grids(X, Y, Z):

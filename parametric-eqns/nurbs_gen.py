@@ -86,12 +86,7 @@ def plot_nurbs_curve(x_curve, y_curve, z_curve, control_points):
 # usage
 if __name__ == "__main__":
     # control points as a numpy array (x, y, z)
-    control_points = np.array([
-        [0, 0, 0],
-        [5, 15, 0],
-        [7, 5, 10],
-        [10, 10, 5]
-    ])
+    control_points = np.array([[4.375, 0, 9.0],[11.12577476653298, 9.102623843946205, -3],[-0.36134408847844635, 12.369723337638627, -6],[-1.1153178663563577, 4.230448091749419, -8]])
 
     weights = [1, 1, 1, 1]  # uniform weights
 
