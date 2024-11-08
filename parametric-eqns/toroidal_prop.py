@@ -20,7 +20,7 @@ hub_resolution = 50 # Resolution for discretizing the hub (needs to equal s_reso
 normalize_blade_mesh = False        # Normalize the blade mesh to have uniform arc length wrt t
 apply_thickness_normal = False      # Apply airfoil thickness normal to camber line
 close_cylinder = True               # Close the cylinder mesh for the hub with top and bottom faces
-plot_matplotlib = True             # Plot the propeller in matplotlib
+plot_matplotlib = False             # Plot the propeller in matplotlib
 
 # Modifiable parameters
 hub_radius = 5  # Radius of the cylindrical hub
@@ -310,6 +310,7 @@ def create_mesh_from_grids(X, Y, Z):
     mesh = mesh.triangulate()
     return mesh
 
+# same as create_mesh_from_grids, but with assumes it's given a cylinder and closes the top and bottom faces
 def close_cylinder_mesh(X, Y, Z):
     # Flatten the grid arrays
     points = np.column_stack((X.ravel(), Y.ravel(), Z.ravel()))
@@ -373,7 +374,7 @@ final_mesh = final_mesh.fill_holes(3, inplace=True)  # fill small mesh holes idk
 final_mesh.plot_normals(mag=0.25, show_edges=True)
 # final_mesh.plot(show_edges=True)
 
+print("Final mesh is manifold:", final_mesh.is_manifold)
+
 # export the final mesh to STL
 final_mesh.save('toroidal_propeller.stl')
-
-
