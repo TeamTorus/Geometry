@@ -367,8 +367,8 @@ mesh_hub_m = mesh_hub.fill_holes(100).clean()
 mesh_blades_m = mesh_blades.fill_holes(100).clean()
 
 
-final_mesh = mesh_hub_m.boolean_union(mesh_blades, tolerance=1e-4)
-final_mesh = final_mesh.fill_holes(3, inplace=True)  # fill small mesh holes idk y they here
+final_mesh = mesh_hub_m.boolean_union(mesh_blades, tolerance=1e-9).clean()
+final_mesh = final_mesh.fill_holes(3, inplace=True).clean()  # fill small mesh holes idk y they here
 
 
 final_mesh.plot_normals(mag=0.25, show_edges=True)
@@ -378,3 +378,9 @@ print("Final mesh is manifold:", final_mesh.is_manifold)
 
 # export the final mesh to STL
 final_mesh.save('toroidal_propeller.stl')
+
+import time
+time.sleep(.1)  # idk, but it makes me feel better
+
+import pymeshfix
+pymeshfix.clean_from_file('toroidal_propeller.stl', 'fixed_toroidal_propeller.stl')
