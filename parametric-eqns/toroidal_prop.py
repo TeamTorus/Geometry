@@ -20,7 +20,7 @@ hub_resolution = 50 # Resolution for discretizing the hub (needs to equal s_reso
 normalize_blade_mesh = False        # Normalize the blade mesh to have uniform arc length wrt t
 apply_thickness_normal = False      # Apply airfoil thickness normal to camber line
 close_cylinder = True               # Close the cylinder mesh for the hub with top and bottom faces
-plot_matplotlib = False             # Plot the propeller in matplotlib
+plot_matplotlib = True             # Plot the propeller in matplotlib
 
 # Modifiable parameters
 hub_radius = 5  # Radius of the cylindrical hub
@@ -45,11 +45,11 @@ d_AoA = 1 * np.pi
 e_AoA = 0
 
 # Scaling Params
-a_scX = 0
+a_scX = 1
 b_scX = 0
 c_scX = 0
 d_scX = 1
-e_scX = 2
+e_scX = 4
 
 a_scY = 0
 b_scY = 0
@@ -149,7 +149,13 @@ s_vals = np.linspace(s_domain[0], s_domain[1], s_resolution)
 
 # ------------------------------------------ PT 3: Create the 3D curve  ------------------------------------------
 
-blade_hub_radius = hub_radius - hub_radius / 4
+scale0 = max(scale_x.subs(s, 0), scale_y.subs(s, 0))  # scale at s=0
+scale1 = max(scale_x.subs(s, 1), scale_y.subs(s, 1))  # scale at s=1
+scale = max(scale0, scale1)  # scale factor for the control points
+
+inset_ratio = 1 - min(scale * 1/4, 1/2)
+
+blade_hub_radius = inset_ratio * hub_radius
 
 # Pick first point
 ctrl_point1 = [blade_hub_radius, 0, hub_length / 2 - 1]
