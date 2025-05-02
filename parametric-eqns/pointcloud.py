@@ -30,6 +30,7 @@ a_scX, b_scX, c_scX, d_scX, e_scX = 1, 0, 0, 1, 2
 a_scY, b_scY, c_scY, d_scY, e_scY = 0, 0, 0, 1, 1
 
 # ---- Centre‑line control points & weights ----
+num_blades = 3
 hub_radius, hub_length = 5, 20
 ctrl_pts = np.array([
     [hub_radius,       0,  hub_length/2 - 1],
@@ -160,3 +161,36 @@ ax.set_xlabel('X'); ax.set_ylabel('Y'); ax.set_zlabel('Z')
 ax.set_title('Toroidal Propeller – point cloud (exact analytic frame)')
 plt.tight_layout()
 plt.show()
+
+outfile = 'propeller_pointcloud.txt'
+mid = np.where(t_vals <= 1)[0][-1]
+with open(outfile, 'w') as f:
+    for i in range(n_s - 1):
+        idx = i + 1
+        # top half
+        f.write(f"Airfoil{idx}a\n")
+        f.write("START\t0.000000\n")
+        for j in range(0, mid+1):
+            f.write(f"{X[i,j]:.8f}\t{Y[i,j]:.8f}\t{Z[i,j]:.8f}\n")
+        f.write("END\t0.000000\n")
+        # bottom half
+        f.write(f"Airfoil{idx}b\n")
+        f.write("START\t0.000000\n")
+        for j in range(mid, n_t):
+            f.write(f"{X[i,j]:.8f}\t{Y[i,j]:.8f}\t{Z[i,j]:.8f}\n")
+        f.write("END\t0.000000\n")
+    # guide curves
+    f.write("GuideCurve1\n")
+    f.write("START\t0.000000\n")
+    for i in range(n_s - 1):
+        f.write(f"{X[i,0]:.8f}\t{Y[i,0]:.8f}\t{Z[i,0]:.8f}\n")
+    f.write("END\t0.000000\n")
+    f.write("GuideCurve2\n")
+    f.write("START\t0.000000\n")
+    for i in range(n_s - 1):
+        f.write(f"{X[i,mid]:.8f}\t{Y[i,mid]:.8f}\t{Z[i,mid]:.8f}\n")
+    f.write("END\t0.000000\n")
+    # hub and blade count
+    f.write(f"HubRadius {hub_radius:.2f}\n")
+    f.write(f"Blades {num_blades}\n")
+print(f"Wrote pointcloud data to {outfile}")
