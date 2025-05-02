@@ -40,8 +40,8 @@ ctrl_pts = np.array([
 weights = [1, 1, 1, 1]
 
 # ---- Discretisation ----
-n_s = 5      # blade stations (keep small to test continuity)
-n_t = 200    # points per airfoil outline (higher = smoother airfoil)
+n_s = 25      # blade stations (keep small to test continuity)
+n_t = 50    # points per airfoil outline (higher = smoother airfoil)
 
 # ---------------------------------------------------------------------------
 # 1)  Exact symbolic airfoil in local (x,y)
@@ -124,15 +124,18 @@ Z = Zfun(S, Tm)
 # Evaluate N & B numerically just to detect flips
 Nfun = sp.lambdify(s, N, modules=mods)
 Bfun = sp.lambdify(s, B, modules=mods)
-N_num = np.stack([Nfun(si) for si in s_vals])  # (n_s,3)
-B_num = np.stack([Bfun(si) for si in s_vals])  # (n_s,3)
+N_num = np.array([Nfun(si).flatten() for si in s_vals])  # (n_s,3)
+B_num = np.array([Bfun(si).flatten() for si in s_vals])  # (n_s,3)
 
+# Then the broadcasting will work correctly
 orient_sign = np.ones(n_s)
 for i in range(1, n_s):
     if np.dot(N_num[i], N_num[i-1]) < 0:  # sign flip detected
         orient_sign[i:] *= -1
-N_num *= orient_sign[:,None]
-B_num *= orient_sign[:,None]
+        
+# Apply the sign correction to N_num and B_num
+N_num = N_num * orient_sign[:,None]  # Reshape orient_sign for broadcasting
+B_num = B_num * orient_sign[:,None]
 # regenerate coordinates with consistent sign
 for i,sgn in enumerate(orient_sign):
     if sgn == -1:
