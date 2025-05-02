@@ -5,7 +5,9 @@ import matplotlib.pyplot as plt
 import pyvista as pv
 from scipy.integrate import quad
 from scipy.interpolate import interp1d
+
 from nurbs_gen import nurbs_gen
+from screw_prop_gen import generate_equivalent_screw_propeller
 
 # symbolic variables
 t, s = sp.symbols('t s', real=True)
@@ -28,7 +30,7 @@ hub_length = 20  # Length of the cylindrical hub
 num_blades = 3  # Number of blades
 
 # Airfoil Params
-m = 0.02
+m = 0.04
 p = 0.4
 thickness = 0.5
 
@@ -49,13 +51,25 @@ a_scX = 1
 b_scX = 0
 c_scX = 0
 d_scX = 1
-e_scX = 4
+e_scX = 2
 
 a_scY = 0
 b_scY = 0
 c_scY = 0
 d_scY = 1
-e_scY = 2
+e_scY = 1
+
+param_set = dict(
+    s_domain=s_domain, t_domain=t_domain, s_resolution=s_resolution, t_resolution=t_resolution,
+    normalize_blade_mesh=normalize_blade_mesh, apply_thickness_normal=apply_thickness_normal,
+    close_cylinder=close_cylinder, plot_matplotlib=plot_matplotlib,
+    hub_radius=hub_radius, hub_length=hub_length, num_blades=num_blades,
+    m=m, p=p, thickness=thickness,
+    loc_ctrl_point2=loc_ctrl_point2, loc_ctrl_point3=loc_ctrl_point3, blade_vector=blade_vector,
+    a_AoA=a_AoA, b_AoA=b_AoA, c_AoA=c_AoA, d_AoA=d_AoA, e_AoA=e_AoA,
+    a_scX=a_scX, b_scX=b_scX, c_scX=c_scX, d_scX=d_scX, e_scX=e_scX,
+    a_scY=a_scY, b_scY=b_scY, c_scY=c_scY, d_scY=d_scY, e_scY=e_scY
+)
 
 # ---------------------------------------- PT 1: Define the 2D shape ----------------------------------------
 # https://en.wikipedia.org/wiki/NACA_airfoil
@@ -373,7 +387,7 @@ mesh_hub_m = mesh_hub.fill_holes(100).clean()
 mesh_blades_m = mesh_blades.fill_holes(100).clean()
 
 
-final_mesh = mesh_hub_m.boolean_union(mesh_blades, tolerance=1e-9).clean()
+final_mesh = mesh_hub_m.boolean_union(mesh_blades, tolerance=1e-5).clean()
 final_mesh = final_mesh.fill_holes(3, inplace=True).clean()  # fill small mesh holes idk y they here
 
 
