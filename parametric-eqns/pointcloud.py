@@ -32,6 +32,9 @@ a_scY, b_scY, c_scY, d_scY, e_scY = 0, 0, 0, 1, 1
 # ---- Centre‑line control points & weights ----
 num_blades = 3
 hub_radius, hub_length = 5, 20
+angle_max_deg = 25  # max entry angle (radial) for hub entry
+enforce_angle = True  
+
 ctrl_pts = np.array([
     [hub_radius,       0,  hub_length/2 - 1],
     [hub_radius+3,     0,  hub_length/2 - 5],
@@ -39,6 +42,38 @@ ctrl_pts = np.array([
     [hub_radius*np.cos(1.0), hub_radius*np.sin(1.0), -hub_length/2],
 ])
 weights = [1, 1, 1, 1]
+
+# ---------------------------------------------------------------------------
+# Enforce hub entry angle by adjusting interior control points
+# ---------------------------------------------------------------------------
+if enforce_angle:
+    def adjust_entry(idx_root, idx_next):
+        """Ensure ctrl_pts[idx_root]→ctrl_pts[idx_next] is radial (≤ angle_max)."""
+        P_root = ctrl_pts[idx_root]
+        P_next = ctrl_pts[idx_next]
+        # tangent estimate (first derivative dir for C0 NURBS)
+        T_vec = P_next - P_root
+        T_unit = T_vec / np.linalg.norm(T_vec)
+        # hub outward normal (radial in xy‑plane)
+        radial_vec = np.array([P_root[0], P_root[1], 0.0])
+        radial_unit = radial_vec / np.linalg.norm(radial_vec)
+        # angle between T and radial
+        angle = np.degrees(np.arccos(np.clip(np.abs(np.dot(T_unit, radial_unit)), -1, 1)))
+        if angle > angle_max_deg:
+            # project P_next onto radial line, keeping its original z for smoothness
+            proj_len = np.linalg.norm(P_next[:2] - P_root[:2])  # keep same spacing
+            P_adjust = P_root[:2] + proj_len * radial_unit[:2]
+            ctrl_pts[idx_next, 0] = P_adjust[0]
+            ctrl_pts[idx_next, 1] = P_adjust[1]
+            # recompute tangent (optional diagnostics)
+            new_T = ctrl_pts[idx_next]-P_root
+            new_ang = np.degrees(np.arccos(np.clip(np.abs(np.dot(new_T/np.linalg.norm(new_T),radial_unit)), -1, 1)))
+            print(f"Adjusted control point {idx_next} to enforce entry angle: {angle:.1f}° → {new_ang:.1f}°")
+
+    # root side (s≈0) uses ctrl_pts[0] & ctrl_pts[1]
+    adjust_entry(0, 1)
+    # tip side (s≈1) uses ctrl_pts[3] & ctrl_pts[2] (note reverse order)
+    adjust_entry(3, 2)
 
 # ---- Discretisation ----
 n_s = 25      # blade stations (keep small to test continuity)
@@ -191,6 +226,6 @@ with open(outfile, 'w') as f:
         f.write(f"{X[i,mid]:.8f}\t{Y[i,mid]:.8f}\t{Z[i,mid]:.8f}\n")
     f.write("END\t0.000000\n")
     # hub and blade count
-    f.write(f"HubRadius {hub_radius:.2f}\n")
+    f.write(f"HubRadius {hub_radius * 1.25:.2f}\n")     # expand the hub for offset
     f.write(f"Blades {num_blades}\n")
 print(f"Wrote pointcloud data to {outfile}")
