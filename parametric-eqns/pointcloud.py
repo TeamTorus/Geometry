@@ -11,6 +11,8 @@ Toroidal propeller - point-cloud generator
 • Adds a tiny orientation-smoothing routine so successive cross-sections keep the same handedness (avoids flipped airfoils when n_s is small)
 """
 
+master_scale_factor = 1/100   # make everything in cm then output in m
+
 # ---------------------------------------------------------------------------
 # 0)  Symbolic setup & master parameters
 # ---------------------------------------------------------------------------
@@ -31,18 +33,16 @@ a_scY, b_scY, c_scY, d_scY, e_scY = 0, 0, 0, 1, 1
 
 # ---- Centre-line control points & weights ----
 num_blades = 3
-hub_radius = 5 
-hub_length = 20
-angle_max_deg = 25  # max entry angle (radial) for hub entry
-enforce_angle = True  
+hub_radius = 3.75
+hub_length = hub_radius * 4
+angle_max_deg = 15  # max entry angle (radial) for hub entry
+enforce_angle = False  
 
 degree_around_hub = 60
 # Centerline Params
-loc_ctrl_point2 = [3, 3, 10]
-loc_ctrl_point3 = [7, 6, 15]
+loc_ctrl_point2 = [3, 3, 5]
+loc_ctrl_point3 = [5, 5.5, 7.5]
 blade_vector = [8, 8]   # offset between the two endpoints
-
-
 
 # ------ Generate the ctrl points for the centerline ------
 scaleX = a_scX*s**4 + b_scX*s**3 + c_scX*s**2 + d_scX*s + e_scX
@@ -77,7 +77,7 @@ ctrl_point3 = [loc3_radius * np.cos(disp_theta3), loc3_radius * np.sin(disp_thet
 
 print(ctrl_point1, ctrl_point2, ctrl_point3, ctrl_point4)
 
-control_points = np.array([ctrl_point1, ctrl_point2, ctrl_point3, ctrl_point4])  # [x, y, z]
+ctrl_pts = np.array([ctrl_point1, ctrl_point2, ctrl_point3, ctrl_point4])  # [x, y, z]
 weights = [1, 1, 1, 1]
 
 # ---------------------------------------------------------------------------
@@ -240,26 +240,26 @@ with open(outfile, 'w') as f:
         f.write(f"Airfoil{idx}a\n")
         f.write("START\t0.000000\n")
         for j in range(0, mid+1):
-            f.write(f"{X[i,j]:.8f}\t{Y[i,j]:.8f}\t{Z[i,j]:.8f}\n")
+            f.write(f"{X[i,j] * master_scale_factor:.8f}\t{Y[i,j] * master_scale_factor:.8f}\t{Z[i,j] * master_scale_factor:.8f}\n")
         f.write("END\t0.000000\n")
         # bottom half
         f.write(f"Airfoil{idx}b\n")
         f.write("START\t0.000000\n")
         for j in range(mid, n_t):
-            f.write(f"{X[i,j]:.8f}\t{Y[i,j]:.8f}\t{Z[i,j]:.8f}\n")
+            f.write(f"{X[i,j] * master_scale_factor:.8f}\t{Y[i,j] * master_scale_factor:.8f}\t{Z[i,j] * master_scale_factor:.8f}\n")
         f.write("END\t0.000000\n")
     # guide curves
     f.write("GuideCurve1\n")
     f.write("START\t0.000000\n")
     for i in range(n_s - 1):
-        f.write(f"{X[i,0]:.8f}\t{Y[i,0]:.8f}\t{Z[i,0]:.8f}\n")
+        f.write(f"{X[i,0] * master_scale_factor:.8f}\t{Y[i,0] * master_scale_factor:.8f}\t{Z[i,0] * master_scale_factor:.8f}\n")
     f.write("END\t0.000000\n")
     f.write("GuideCurve2\n")
     f.write("START\t0.000000\n")
     for i in range(n_s - 1):
-        f.write(f"{X[i,mid]:.8f}\t{Y[i,mid]:.8f}\t{Z[i,mid]:.8f}\n")
+        f.write(f"{X[i,mid] * master_scale_factor:.8f}\t{Y[i,mid] * master_scale_factor:.8f}\t{Z[i,mid] * master_scale_factor:.8f}\n")
     f.write("END\t0.000000\n")
     # hub and blade count
-    f.write(f"HubRadius {hub_radius * 1.35:.2f}\n")     # expand the hub for offset
+    f.write(f"HubRadius {hub_radius * master_scale_factor:.2f}\n")  # expand the hub for offset
     f.write(f"Blades {num_blades}\n")
 print(f"Wrote pointcloud data to {outfile}")
