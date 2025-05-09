@@ -4,11 +4,11 @@ import matplotlib.pyplot as plt
 from nurbs_gen import nurbs_gen  # your existing symbolic NURBS helper
 
 """
-Toroidal propeller ‑ point‑cloud generator
-––––––––––––––––––––––––––––––––––––––––-
-• Keeps **all** analytic steps from your original script (symbolic airfoil → rotation → scaling → Frenet–Serret frame → extrusion)
-• Uses the *exact* symbolic expressions for T, N, B (no finite‑difference approximations)
-• Adds a tiny orientation‑smoothing routine so successive cross‑sections keep the same handedness (avoids flipped airfoils when n_s is small)
+Toroidal propeller - point-cloud generator
+-----------------------------------------
+• Keeps **all** analytic steps from your original script (symbolic airfoil → rotation → scaling → Frenet-Serret frame → extrusion)
+• Uses the *exact* symbolic expressions for T, N, B (no finite-difference approximations)
+• Adds a tiny orientation-smoothing routine so successive cross-sections keep the same handedness (avoids flipped airfoils when n_s is small)
 """
 
 # ---------------------------------------------------------------------------
@@ -17,30 +17,67 @@ Toroidal propeller ‑ point‑cloud generator
 # Independent symbols
 s, t = sp.symbols('s t', real=True)
 
-# ---- Airfoil parameters (same as your NACA‑4 definition) ----
+# ---- Airfoil parameters (same as your NACA-4 definition) ----
 m, p, thickness = 0.04, 0.4, 0.5
 apply_thickness_normal = False  # keep as in original
 
 # ---- AoA(s) polynomial coefficients        AoA(s) = a*s⁴ + b*s³ + c*s² + d*s + e ----
 a_AoA, b_AoA, c_AoA, d_AoA, e_AoA = 0, 0, 0, 1*np.pi, 0
 
-# ---- Span‑wise scaling for the airfoil outline ----
+# ---- Span-wise scaling for the airfoil outline ----
 a_scX, b_scX, c_scX, d_scX, e_scX = 1, 0, 0, 1, 2
 
 a_scY, b_scY, c_scY, d_scY, e_scY = 0, 0, 0, 1, 1
 
-# ---- Centre‑line control points & weights ----
+# ---- Centre-line control points & weights ----
 num_blades = 3
-hub_radius, hub_length = 5, 20
+hub_radius = 5 
+hub_length = 20
 angle_max_deg = 25  # max entry angle (radial) for hub entry
 enforce_angle = True  
 
-ctrl_pts = np.array([
-    [hub_radius,       0,  hub_length/2 - 1],
-    [hub_radius+3,     0,  hub_length/2 - 5],
-    [hub_radius+7,     0, -hub_length/2 + 5],
-    [hub_radius*np.cos(1.0), hub_radius*np.sin(1.0), -hub_length/2],
-])
+degree_around_hub = 60
+# Centerline Params
+loc_ctrl_point2 = [3, 3, 10]
+loc_ctrl_point3 = [7, 6, 15]
+blade_vector = [8, 8]   # offset between the two endpoints
+
+
+
+# ------ Generate the ctrl points for the centerline ------
+scaleX = a_scX*s**4 + b_scX*s**3 + c_scX*s**2 + d_scX*s + e_scX
+scaleY = a_scY*s**4 + b_scY*s**3 + c_scY*s**2 + d_scY*s + e_scY
+
+
+scale0 = max(scaleX.subs(s, 0), scaleY.subs(s, 0))  # scale at s=0
+scale1 = max(scaleX.subs(s, 1), scaleY.subs(s, 1))  # scale at s=1
+scale = max(scale0, scale1)  # scale factor for the control points
+
+inset_ratio = 1 - min(scale * 1/4, 1/2)
+
+blade_hub_radius = inset_ratio * hub_radius
+
+# Pick first point
+ctrl_point1 = [blade_hub_radius, 0, hub_length / 2 - 1]
+
+# For last control point, offset by blade_vector
+# blade_vector[0] represents a movement along the circumference of the hub
+# blade_vector[1] represents a movement along the z-axis
+disp_theta = blade_vector[0] / (2 * np.pi * blade_hub_radius) * 2 * np.pi
+ctrl_point4 = [blade_hub_radius * np.cos(disp_theta), blade_hub_radius * np.sin(disp_theta), -1 * blade_vector[1]]
+
+# Define the control points for the curve (converting to cylindrical and translating)
+disp_theta2 = loc_ctrl_point2[0] / (2 * np.pi * blade_hub_radius) * 2 * np.pi
+loc2_radius = blade_hub_radius + loc_ctrl_point2[2]
+ctrl_point2 = [loc2_radius * np.cos(disp_theta2), loc2_radius * np.sin(disp_theta2), -1 * loc_ctrl_point2[1]]
+
+disp_theta3 = loc_ctrl_point3[0] / (2 * np.pi * blade_hub_radius) * 2 * np.pi
+loc3_radius = blade_hub_radius + loc_ctrl_point3[2]
+ctrl_point3 = [loc3_radius * np.cos(disp_theta3), loc3_radius * np.sin(disp_theta3), -1 * loc_ctrl_point3[1]]
+
+print(ctrl_point1, ctrl_point2, ctrl_point3, ctrl_point4)
+
+control_points = np.array([ctrl_point1, ctrl_point2, ctrl_point3, ctrl_point4])  # [x, y, z]
 weights = [1, 1, 1, 1]
 
 # ---------------------------------------------------------------------------
@@ -54,7 +91,7 @@ if enforce_angle:
         # tangent estimate (first derivative dir for C0 NURBS)
         T_vec = P_next - P_root
         T_unit = T_vec / np.linalg.norm(T_vec)
-        # hub outward normal (radial in xy‑plane)
+        # hub outward normal (radial in xy-plane)
         radial_vec = np.array([P_root[0], P_root[1], 0.0])
         radial_unit = radial_vec / np.linalg.norm(radial_vec)
         # angle between T and radial
@@ -114,14 +151,11 @@ Rot = sp.Matrix([[sp.cos(AoA), -sp.sin(AoA)],
 xy_rot = Rot*sp.Matrix([x_2D, y_2D])
 Xr, Yr = xy_rot[0], xy_rot[1]
 
-scaleX = a_scX*s**4 + b_scX*s**3 + c_scX*s**2 + d_scX*s + e_scX
-scaleY = a_scY*s**4 + b_scY*s**3 + c_scY*s**2 + d_scY*s + e_scY
-
 Xrs = Xr*scaleX
 Yrs = Yr*scaleY
 
 # ---------------------------------------------------------------------------
-# 3)  Centre‑line curve & Frenet–Serret frame (exact derivatives)
+# 3)  Centre-line curve & Frenet-Serret frame (exact derivatives)
 # ---------------------------------------------------------------------------
 x_curve, y_curve, z_curve = nurbs_gen(s, ctrl_pts, weights, to_plot=False)
 
@@ -175,7 +209,7 @@ B_num = B_num * orient_sign[:,None]
 # regenerate coordinates with consistent sign
 for i,sgn in enumerate(orient_sign):
     if sgn == -1:
-        X[i] = Xfun(s_vals[i], Tm[i])  # re‑eval not needed, parity handled via sign in N,B, but cheap
+        X[i] = Xfun(s_vals[i], Tm[i])  # re-eval not needed, parity handled via sign in N,B, but cheap
         Y[i] = Yfun(s_vals[i], Tm[i])
         Z[i] = Zfun(s_vals[i], Tm[i])
 
@@ -188,12 +222,12 @@ fig = plt.figure(figsize=(9,7))
 ax = fig.add_subplot(111, projection='3d')
 ax.scatter(points[:,0], points[:,1], points[:,2], s=2, alpha=0.7)
 
-# draw each airfoil polyline to see if cross‑sections connect
+# draw each airfoil polyline to see if cross-sections connect
 for i in range(n_s):
     ax.plot(X[i], Y[i], Z[i], lw=0.8, c='k')
 
 ax.set_xlabel('X'); ax.set_ylabel('Y'); ax.set_zlabel('Z')
-ax.set_title('Toroidal Propeller – point cloud (exact analytic frame)')
+ax.set_title('Toroidal Propeller - point cloud (exact analytic frame)')
 plt.tight_layout()
 plt.show()
 
@@ -226,6 +260,6 @@ with open(outfile, 'w') as f:
         f.write(f"{X[i,mid]:.8f}\t{Y[i,mid]:.8f}\t{Z[i,mid]:.8f}\n")
     f.write("END\t0.000000\n")
     # hub and blade count
-    f.write(f"HubRadius {hub_radius * 1.25:.2f}\n")     # expand the hub for offset
+    f.write(f"HubRadius {hub_radius * 1.35:.2f}\n")     # expand the hub for offset
     f.write(f"Blades {num_blades}\n")
 print(f"Wrote pointcloud data to {outfile}")
