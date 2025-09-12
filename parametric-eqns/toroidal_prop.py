@@ -8,6 +8,7 @@ from scipy.interpolate import interp1d
 
 from nurbs_gen import nurbs_gen
 from screw_prop_gen import generate_equivalent_screw_propeller
+from union_with_bpy import union_stl_files
 
 # symbolic variables
 t, s = sp.symbols('t s', real=True)
@@ -386,21 +387,12 @@ print("Hub mesh is manifold:", mesh_hub.is_manifold)
 mesh_hub_m = mesh_hub.fill_holes(100).clean()
 mesh_blades_m = mesh_blades.fill_holes(100).clean()
 
+mesh_blades_m.save('zBlades.stl')
+mesh_hub_m.save('zHub.stl')
 
-final_mesh = mesh_hub_m.boolean_union(mesh_blades, tolerance=1e-5).clean()
-final_mesh = final_mesh.fill_holes(3, inplace=True).clean()  # fill small mesh holes idk y they here
-
-
-final_mesh.plot_normals(mag=0.25, show_edges=True)
-# final_mesh.plot(show_edges=True)
-
-print("Final mesh is manifold:", final_mesh.is_manifold)
-
-# export the final mesh to STL
-final_mesh.save('toroidal_propeller.stl')
-
-import time
-time.sleep(.1)  # idk, but it makes me feel better
-
-import pymeshfix
-pymeshfix.clean_from_file('toroidal_propeller.stl', 'fixed_toroidal_propeller.stl')
+# boolean union them
+success = union_stl_files('zHub.stl', 'zBlades.stl', 'toroidal_propeller.stl')
+if success:
+    print("Successfully created toroidal_propeller.stl")
+else:
+    print("Failed to create toroidal_propeller.stl")
