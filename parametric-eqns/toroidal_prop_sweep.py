@@ -32,9 +32,9 @@ else:
 # Fixed parameters
 s_domain = [0, 1]
 t_domain = [0, 2]
-s_resolution = 50  # Reduced for faster generation
-t_resolution = 50  # Reduced for faster generation
-hub_resolution = 25
+s_resolution = 100
+t_resolution = 100
+hub_resolution = 50
 
 normalize_blade_mesh = False
 apply_thickness_normal = False
@@ -56,13 +56,13 @@ loc_ctrl_point3_base = [7, 6, 15]
 blade_vector_base = [8, 8]
 
 # Variation factors for control points
-ctrl_point_variations = [0.7, 1.0, 1.3]  # Scale factors
-blade_vector_variations = [0.8, 1.0, 1.2]
+ctrl_point_variations = [0.75, 1.0, 1.25, 1.5]  # Scale factors
+blade_vector_variations = [0.75, 1.0, 1.5]
 
 # Angle of attack coefficients
 c_AoA_values = [0, 0.5, 1.0]  # Quadratic term
 d_AoA_values = [0.5 * np.pi, 1.0 * np.pi, 1.5 * np.pi]  # Linear term
-e_AoA_values = [0, 0.2 * np.pi]  # Constant term
+e_AoA_values = [np.pi]  # Constant term
 
 # Fixed AoA coefficients
 a_AoA = 0

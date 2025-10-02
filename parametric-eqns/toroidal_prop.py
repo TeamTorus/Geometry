@@ -26,39 +26,39 @@ close_cylinder = True               # Close the cylinder mesh for the hub with t
 plot_matplotlib = True             # Plot the propeller in matplotlib
 
 # Modifiable parameters
-hub_radius = 5  # Radius of the cylindrical hub
+hub_radius = 3  # Radius of the cylindrical hub
 hub_length = 20  # Length of the cylindrical hub
 num_blades = 3  # Number of blades
 
 # Airfoil Params
 m = 0.04
 p = 0.4
-thickness = 0.5
+thickness = .75
 
 # Centerline Params
-loc_ctrl_point2 = [3, 3, 10]
-loc_ctrl_point3 = [7, 6, 15]
-blade_vector = [8, 8]   # offset between the two endpoints
+loc_ctrl_point2 = [1.5, 0.75, 20]
+loc_ctrl_point3 = [4, 1.5, 25]
+blade_vector = [12, 1.5]   # offset between the two endpoints
 
 # Angle of Attack
 a_AoA = 0
 b_AoA = 0
 c_AoA = 0
-d_AoA = 1 * np.pi
-e_AoA = 0
+d_AoA = 0.2 * np.pi
+e_AoA = np.pi
 
 # Scaling Params
 a_scX = 1
 b_scX = 0
 c_scX = 0
-d_scX = 1
-e_scX = 2
+d_scX = 0.5
+e_scX = 3
 
 a_scY = 0
 b_scY = 0
 c_scY = 0
-d_scY = 1
-e_scY = 1
+d_scY = 0.5
+e_scY = 1.5
 
 param_set = dict(
     s_domain=s_domain, t_domain=t_domain, s_resolution=s_resolution, t_resolution=t_resolution,
@@ -114,6 +114,9 @@ Y_rotated = XY_rotated[1]
 scale_x = a_scX * s**4 + b_scX * s**3 + c_scX * s**2 + d_scX * s + e_scX  # Parametric scaling for x
 scale_y = a_scY * s**4 + b_scY * s**3 + c_scY * s**2 + d_scY * s + e_scY  # Parametric scaling for y
 
+scale_x = 0.2 + (scale_x - 0.2) * sp.Heaviside(0.99 - s) * sp.Heaviside(s - 0.01)
+scale_y = 0.2 + (scale_y - 0.2) * sp.Heaviside(0.99 - s) * sp.Heaviside(s - 0.01)
+
 # Apply scaling in the local frame (after rotation)
 X_rotated_scaled = X_rotated * scale_x
 Y_rotated_scaled = Y_rotated * scale_y
@@ -164,11 +167,11 @@ s_vals = np.linspace(s_domain[0], s_domain[1], s_resolution)
 
 # ------------------------------------------ PT 3: Create the 3D curve  ------------------------------------------
 
-scale0 = max(scale_x.subs(s, 0), scale_y.subs(s, 0))  # scale at s=0
-scale1 = max(scale_x.subs(s, 1), scale_y.subs(s, 1))  # scale at s=1
-scale = max(scale0, scale1)  # scale factor for the control points
+scale0 = float(max(scale_x.subs(s, 0), scale_y.subs(s, 0))) 
+scale1 = float(max(scale_x.subs(s, 1), scale_y.subs(s, 1))) 
+scale = max(scale0, scale1)
 
-inset_ratio = 1 - min(scale * 1/4, 1/2)
+inset_ratio = 6/8
 
 blade_hub_radius = inset_ratio * hub_radius
 
