@@ -77,7 +77,10 @@ else:
 yu = yc + yt * sp.cos(theta_c)
 yl_1 = yc - yt * sp.cos(theta_c)
 xu = t - yt * sp.sin(theta_c)
-xl = (2 - t) + yt * sp.sin(theta_c)
+# Define the lower-surface x-coordinate function
+xl_1 = t + yt * sp.sin(theta_c) 
+# Now, re-parameterize it 
+xl = xl_1.subs(t, (2 - t))
 yl = yl_1.subs(t, (2 - t))
 y_2D = yu * sp.Heaviside(1 - t) + yl * sp.Heaviside(t - 1)
 x_2D = xu * sp.Heaviside(1 - t) + xl * sp.Heaviside(t - 1) - 0.5
@@ -192,6 +195,7 @@ for s_val in s_vals_cad:
 blade_solid = cq.Solid.makeLoft(rib_wires)
 
 print(f"Blade solid created in {time.time() - start_time:.2f} seconds.")
+
 # --------------------------------------- PT 7: Build Hub and Assemble Propeller (NEW: CadQuery) ---------------------------------------
 
 # 1. Create the hub solid
