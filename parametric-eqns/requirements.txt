@@ -8,3 +8,4 @@ pyvista==0.44.1
 sympy==1.12
 bpy==4.0.0
 cadquery==2.5.2
+cadquery-ocp==7.7.2
