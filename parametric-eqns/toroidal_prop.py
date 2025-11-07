@@ -36,8 +36,8 @@ p = 0.4
 thickness = .75
 
 # Centerline Params
-loc_ctrl_point2 = [1.5, -5, 20]
-loc_ctrl_point3 = [8, 0.75, 25]
+loc_ctrl_point2 = [2, -5, 25]
+loc_ctrl_point3 = [5, 0.75, 30]
 blade_vector = [12, 1.5]   # offset between the two endpoints
 
 # Angle of Attack
@@ -52,7 +52,7 @@ a_scX = 1
 b_scX = 0
 c_scX = -2
 d_scX = 2.5
-e_scX = 4
+e_scX = 3
 
 a_scY = 0
 b_scY = 0
