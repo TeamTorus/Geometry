@@ -22,7 +22,7 @@ num_blades = 3; % Number of blades
 % Airfoil Params
 m = 0.02;
 p = 0.4;
-thickness = 0.5;
+thickness = 0.2;
 
 % Centerline Params
 loc_ctrl_point2 = [3 3 10];

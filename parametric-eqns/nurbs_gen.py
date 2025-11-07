@@ -37,9 +37,9 @@ def nurbs_gen(s, control_points, weights, to_plot=False):
     for i in range(n + 1):
         N_i = nurbs_basis(i, degree, s, knot_vector)
         wN_i = N_i * weights[i]
-        x_curve += wN_i * control_points[i, 0]
-        y_curve += wN_i * control_points[i, 1]
-        z_curve += wN_i * control_points[i, 2]
+        x_curve += wN_i * float(control_points[i, 0])
+        y_curve += wN_i * float(control_points[i, 1])
+        z_curve += wN_i * float(control_points[i, 2])
         sum_weights += wN_i
 
     x_curve = x_curve / sum_weights

@@ -26,7 +26,7 @@ close_cylinder = True               # Close the cylinder mesh for the hub with t
 plot_matplotlib = True             # Plot the propeller in matplotlib
 
 # Modifiable parameters
-hub_radius = 3  # Radius of the cylindrical hub
+hub_radius = 5  # Radius of the cylindrical hub
 hub_length = 20  # Length of the cylindrical hub
 num_blades = 3  # Number of blades
 
@@ -36,8 +36,8 @@ p = 0.4
 thickness = .75
 
 # Centerline Params
-loc_ctrl_point2 = [1.5, 0.75, 20]
-loc_ctrl_point3 = [4, 1.5, 25]
+loc_ctrl_point2 = [1.5, -5, 20]
+loc_ctrl_point3 = [8, 0.75, 25]
 blade_vector = [12, 1.5]   # offset between the two endpoints
 
 # Angle of Attack
@@ -50,15 +50,15 @@ e_AoA = np.pi
 # Scaling Params
 a_scX = 1
 b_scX = 0
-c_scX = 0
-d_scX = 0.5
-e_scX = 3
+c_scX = -2
+d_scX = 2.5
+e_scX = 4
 
 a_scY = 0
 b_scY = 0
-c_scY = 0
-d_scY = 0.5
-e_scY = 1.5
+c_scY = -1
+d_scY = 0
+e_scY = 2
 
 param_set = dict(
     s_domain=s_domain, t_domain=t_domain, s_resolution=s_resolution, t_resolution=t_resolution,
@@ -171,7 +171,7 @@ scale0 = float(max(scale_x.subs(s, 0), scale_y.subs(s, 0)))
 scale1 = float(max(scale_x.subs(s, 1), scale_y.subs(s, 1))) 
 scale = max(scale0, scale1)
 
-inset_ratio = 6/8
+inset_ratio = 4/8
 
 blade_hub_radius = inset_ratio * hub_radius
 
@@ -193,7 +193,29 @@ disp_theta3 = loc_ctrl_point3[0] / (2 * np.pi * blade_hub_radius) * 2 * np.pi
 loc3_radius = blade_hub_radius + loc_ctrl_point3[2]
 ctrl_point3 = [loc3_radius * np.cos(disp_theta3), loc3_radius * np.sin(disp_theta3), -1 * loc_ctrl_point3[1]]
 
-print(ctrl_point1, ctrl_point2, ctrl_point3, ctrl_point4)
+# print(ctrl_point1, ctrl_point2, ctrl_point3, ctrl_point4)
+
+# # convert each ctrl pt to be regular floats
+# def ensure_python_floats(obj):
+#     """
+#     Recursively convert all numeric types (including numpy types and sympy types) 
+#     to Python floats in nested lists/tuples/arrays.
+#     """
+#     if isinstance(obj, (list, tuple)):
+#         return type(obj)(ensure_python_floats(item) for item in obj)
+#     elif isinstance(obj, np.ndarray):
+#         return obj.astype(float).tolist()
+#     elif isinstance(obj, (np.integer, np.floating)):
+#         return float(obj)
+#     elif hasattr(obj, '__float__'):  # Catches sympy types and other numeric types
+#         return float(obj)
+#     else:
+#         return obj
+    
+# ctrl_point1 = ensure_python_floats(ctrl_point1)
+# ctrl_point2 = ensure_python_floats(ctrl_point2)
+# ctrl_point3 = ensure_python_floats(ctrl_point3)
+# ctrl_point4 = ensure_python_floats(ctrl_point4)
 
 control_points = np.array([ctrl_point1, ctrl_point2, ctrl_point3, ctrl_point4])  # [x, y, z]
 
@@ -306,6 +328,8 @@ if plot_matplotlib:
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
     ax.set_title('Extruded Toroidal Propeller with Multiple Blades')
+    # equal axis scaling
+    ax.set_aspect('equal')
     plt.show()
 
 # --------------------------------------- PT 7: Boolean it with PyVista  ---------------------------------------
