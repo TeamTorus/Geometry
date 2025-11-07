@@ -91,8 +91,8 @@ X_rotated = XY_rotated[0]
 Y_rotated = XY_rotated[1]
 scale_x = a_scX * s**4 + b_scX * s**3 + c_scX * s**2 + d_scX * s + e_scX
 scale_y = a_scY * s**4 + b_scY * s**3 + c_scY * s**2 + d_scY * s + e_scY
-scale_x = 0.2 + (scale_x - 0.2) * sp.Heaviside(0.99 - s) * sp.Heaviside(s - 0.01)
-scale_y = 0.2 + (scale_y - 0.2) * sp.Heaviside(0.99 - s) * sp.Heaviside(s - 0.01)
+# scale_x = 0.2 + (scale_x - 0.2) * sp.Heaviside(0.99 - s) * sp.Heaviside(s - 0.01)
+# scale_y = 0.2 + (scale_y - 0.2) * sp.Heaviside(0.99 - s) * sp.Heaviside(s - 0.01)
 X_rotated_scaled = X_rotated * scale_x
 Y_rotated_scaled = Y_rotated * scale_y
 
@@ -154,12 +154,13 @@ Y_airfoil_func = sp.lambdify((s, t), Y_rotated_scaled, modules=['numpy', {'Heavi
 
 print("Lambdifying complete. Starting B-Rep generation with CadQuery...")
 
-# -------------------------------------- PT 6: Build B-Rep Blade Solid (NEW: CadQuery) --------------------------------------
-# -------------------------------------- PT 6: Build B-Rep Blade Solid (NEW: CadQuery) --------------------------------------
+# -------------------------------------- PT 6: Build B-Rep Blade Solid (WITH DEBUGGING) --------------------------------------
 start_time = time.time()
 
 # This list will hold all the 3D "rib" wires
 rib_wires = []
+
+print("--- Starting Rib Generation (s_val, num_points, closure_dist) ---")
 
 for s_val in s_vals_cad:
     # 1. Get centerline position and Frenet frame vectors for this 's'
@@ -178,23 +179,67 @@ for s_val in s_vals_cad:
         pt_3d = C_vec + x_l * N_vec + y_l * B_vec
         points_3d.append(cq.Vector(pt_3d[0], pt_3d[1], pt_3d[2]))
 
-    # 4. NOW we manually close the loop (re-add this line)
-    # This appends Point_A to the end of [Point_A, Point_B, ..., Point_Z]
+    # 4. NOW we manually close the loop
     points_3d.append(points_3d[0])
 
-    # 5. Create a smooth B-Spline edge from the 3D points
-    spline_edge = cq.Edge.makeSpline(points_3d)
+    # 5. --- DEBUGGING BLOCK ---
+    # Check for NaNs
+    np_points = np.array([(v.x, v.y, v.z) for v in points_3d])
+    if np.isnan(np_points).any():
+        print(f"!!! DEBUG: NaN detected in points at s={s_val}. Skipping rib.")
+        continue
     
-    # 6. Use a Workplane as a context to "promote" the edge to a wire
-    wire = cq.Workplane().add(spline_edge).wires().val()
+    # Check for consecutive duplicates (a common cause of failure)
+    duplicates = 0
+    for i in range(len(points_3d) - 1):
+        # Use a reasonable tolerance for "identical"
+        if (points_3d[i] - points_3d[i+1]).Length < 1e-7:
+            duplicates += 1
+            
+    # Check closure distance
+    closure_dist = (points_3d[0] - points_3d[-1]).Length
+    
+    # Print rib info
+    print(f"  s={s_val:8.4f},  pts={len(points_3d):3d},  closed={closure_dist:e},  dups={duplicates:3d}")
+    
+    if duplicates > len(points_3d) * 0.5:
+        print(f"!!! DEBUG: More than 50% of points are duplicates at s={s_val}. This is the likely cause.")
 
-    # 7. Add the wire to our list for lofting
-    rib_wires.append(wire)
+
+    # 6. --- TRY TO BUILD ---
+    try:
+        # 6a. Create a smooth B-Spline edge from the 3D points
+        spline_edge = cq.Edge.makeSpline(points_3d)
+        
+        # 6b. Use a Workplane as a context to "promote" the edge to a wire
+        wire = cq.Workplane().add(spline_edge).wires().val()
+
+        # 6c. Add the wire to our list for lofting
+        rib_wires.append(wire)
+
+    except Exception as e:
+        print("\n" + "!"*20 + " CRASH DETECTED " + "!"*20)
+        print(f"Failed at s_val = {s_val}")
+        print(f"Error: {e}")
+        print("This is almost certainly due to degenerate geometry (all points are identical).")
+        print("See the 'Likely Fix' section in my response.")
+        print("Offending points (first 5):")
+        for i, p in enumerate(points_3d[:5]):
+             print(f"  {i}: ({p.x:8.4f}, {p.y:8.4f}, {p.z:8.4f})")
+        print("Offending points (last 5):")
+        for i, p in enumerate(points_3d[-5:]):
+             print(f"  {len(points_3d)-5+i}: ({p.x:8.4f}, {p.y:8.4f}, {p.z:8.4f})")
+        print("!"*58 + "\n")
+        
+        # Stop the script so we can fix it
+        raise e
 
 # 8. Create the lofted solid from all the rib wires
-blade_solid = cq.Solid.makeLoft(rib_wires)
-
-print(f"Blade solid created in {time.time() - start_time:.2f} seconds.")
+if not rib_wires:
+    print("No ribs were successfully created. Loft failed.")
+else:
+    blade_solid = cq.Solid.makeLoft(rib_wires)
+    print(f"Blade solid created in {time.time() - start_time:.2f} seconds.")
 
 # --------------------------------------- PT 7: Build Hub and Assemble Propeller (NEW: CadQuery) ---------------------------------------
 
