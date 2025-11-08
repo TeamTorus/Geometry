@@ -24,6 +24,7 @@ s_resolution_cad = 25  # Number of "ribs" along the blade's length
 t_resolution_cad = 60  # Number of points to define each airfoil "rib"
 
 # Modifiable parameters
+global_scale = 7.5  # Overall scaling factor for the propeller
 hub_radius = 5  # Radius of the cylindrical hub
 hub_length = 20  # Length of the cylindrical hub
 num_blades = 3  # Number of blades
@@ -98,8 +99,8 @@ Y_rotated_scaled = Y_rotated * scale_y
 
 # -------------------------------------- PT 2: Set Parameter Domains (Simplified) --------------------------------------
 
-t_vals_cad = np.linspace(t_domain[0], t_domain[1], t_resolution_cad, endpoint=False) # <-- ADD 'endpoint=False'
-s_vals_cad = np.linspace(s_domain[0], s_domain[1], s_resolution_cad)
+t_vals_cad = np.linspace(t_domain[0], t_domain[1], t_resolution_cad, endpoint=False)
+s_vals_cad = np.linspace(s_domain[0], s_domain[1], s_resolution_cad, endpoint=False)
 
 # ------------------------------------------ PT 3: Create the 3D curve (Unchanged) ------------------------------------------
 # ... (This entire section is identical to your code) ...
@@ -212,7 +213,7 @@ for s_val in s_vals_cad:
         spline_edge = cq.Edge.makeSpline(points_3d)
         
         # 6b. Use a Workplane as a context to "promote" the edge to a wire
-        wire = cq.Workplane().add(spline_edge).wires().val()
+        wire = cq.Wire.assembleEdges([spline_edge])
 
         # 6c. Add the wire to our list for lofting
         rib_wires.append(wire)
@@ -276,18 +277,24 @@ for i in range(num_blades):
 
 print("Assembly complete.")
 
-# --------------------------------------- PT 8: Export to STEP File (NEW: CadQuery) ---------------------------------------
+# --------------------------------------- PT 8: Export to STEP File (NEW: Scaled) ---------------------------------------
 
-output_filename = "toroidal_propeller.step"
+print(f"Applying global scale factor of {global_scale}...")
+
+# Apply the scaling operation to the final solid
+scaled_propeller_solid = propeller_solid.scale(global_scale)
+
+# I recommend changing the output filename to reflect the change
+output_filename = "toroidal_propeller_scaled.step"
 
 # Use CadQuery's built-in exporter
 try:
     cq.exporters.export(
-        propeller_solid,
+        scaled_propeller_solid,  # <-- Export the new scaled object
         output_filename,
         "STEP"
     )
-    print(f"Successfully exported STEP file to: {output_filename}")
+    print(f"Successfully exported SCALED STEP file to: {output_filename}")
 
 except Exception as e:
     print(f"Failed to export STEP file: {e}")
