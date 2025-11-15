@@ -36,16 +36,16 @@ p = 0.4
 thickness = .75
 
 # Centerline Params
-loc_ctrl_point2 = [2, -5, 25]
-loc_ctrl_point3 = [5, 0.75, 30]
-blade_vector = [12, 1.5]   # offset between the two endpoints
+loc_ctrl_point2 = [-2, -5, 25]
+loc_ctrl_point3 = [-5, 0.75, 30]
+blade_vector = [-12, 1.5]  # offset between the two endpoints
 
 # Angle of Attack
 a_AoA = 0
 b_AoA = 0
 c_AoA = 0
-d_AoA = 0.2 * np.pi
-e_AoA = np.pi
+d_AoA = np.pi
+e_AoA = 0
 
 # Scaling Params
 a_scX = 1
@@ -121,6 +121,30 @@ scale_y = 0.2 + (scale_y - 0.2) * sp.Heaviside(0.99 - s) * sp.Heaviside(s - 0.01
 X_rotated_scaled = X_rotated * scale_x
 Y_rotated_scaled = Y_rotated * scale_y
 
+# -------------------------------------- Plot the 2D airfoil shape --------------------------------------
+if plot_matplotlib:
+    # Lambdify the symbolic expressions for plotting
+    X_func_2D = sp.lambdify((s, t), X_rotated_scaled, modules=['numpy', {'Heaviside': np.heaviside}])
+    Y_func_2D = sp.lambdify((s, t), Y_rotated_scaled, modules=['numpy', {'Heaviside': np.heaviside}])
+
+    # Choose a representative value of s to plot the airfoil shape
+    s_for_plot = 0
+    t_plot_vals = np.linspace(t_domain[0], t_domain[1], 200)
+
+    # Evaluate the airfoil coordinates at the chosen s
+    x_airfoil = X_func_2D(s_for_plot, t_plot_vals)
+    y_airfoil = Y_func_2D(s_for_plot, t_plot_vals)
+
+    # Plot the 2D airfoil
+    plt.figure()
+    plt.plot(x_airfoil, y_airfoil)
+    plt.title(f'2D Airfoil Shape at s={s_for_plot}')
+    plt.xlabel('X')
+    plt.ylabel('Y')
+    plt.grid(True)
+    plt.axis('equal')
+    plt.show()
+
 # -------------------------------------- PT 2: Normalize parameter domains  --------------------------------------
 
 if normalize_blade_mesh:
@@ -192,30 +216,6 @@ ctrl_point2 = [loc2_radius * np.cos(disp_theta2), loc2_radius * np.sin(disp_thet
 disp_theta3 = loc_ctrl_point3[0] / (2 * np.pi * blade_hub_radius) * 2 * np.pi
 loc3_radius = blade_hub_radius + loc_ctrl_point3[2]
 ctrl_point3 = [loc3_radius * np.cos(disp_theta3), loc3_radius * np.sin(disp_theta3), -1 * loc_ctrl_point3[1]]
-
-# print(ctrl_point1, ctrl_point2, ctrl_point3, ctrl_point4)
-
-# # convert each ctrl pt to be regular floats
-# def ensure_python_floats(obj):
-#     """
-#     Recursively convert all numeric types (including numpy types and sympy types) 
-#     to Python floats in nested lists/tuples/arrays.
-#     """
-#     if isinstance(obj, (list, tuple)):
-#         return type(obj)(ensure_python_floats(item) for item in obj)
-#     elif isinstance(obj, np.ndarray):
-#         return obj.astype(float).tolist()
-#     elif isinstance(obj, (np.integer, np.floating)):
-#         return float(obj)
-#     elif hasattr(obj, '__float__'):  # Catches sympy types and other numeric types
-#         return float(obj)
-#     else:
-#         return obj
-    
-# ctrl_point1 = ensure_python_floats(ctrl_point1)
-# ctrl_point2 = ensure_python_floats(ctrl_point2)
-# ctrl_point3 = ensure_python_floats(ctrl_point3)
-# ctrl_point4 = ensure_python_floats(ctrl_point4)
 
 control_points = np.array([ctrl_point1, ctrl_point2, ctrl_point3, ctrl_point4])  # [x, y, z]
 

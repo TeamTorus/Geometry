@@ -3,13 +3,9 @@ import numpy as np
 import sympy as sp
 import time
 
-# --- CadQuery Imports ---
-# Use the high-level CadQuery library as requested
 import cadquery as cq
 
-# --- Your existing imports ---
 from nurbs_gen import nurbs_gen
-# (Other imports from your original file are no longer needed)
 
 # symbolic variables
 t, s = sp.symbols('t s', real=True)
@@ -20,8 +16,8 @@ s_domain = [0, 1]  # Domain for the curve parameter s
 t_domain = [0, 2]  # Domain for the shape parameter t
 
 # --- CAD Generation Parameters ---
-s_resolution_cad = 25  # Number of "ribs" along the blade's length
-t_resolution_cad = 60  # Number of points to define each airfoil "rib"
+s_resolution_cad = 25  # ribs along the blade
+t_resolution_cad = 60  # points along the airfoil cross-section
 
 # Modifiable parameters
 global_scale = 7.5  # Overall scaling factor for the propeller
@@ -35,16 +31,16 @@ p = 0.4
 thickness = .75
 
 # Centerline Params
-loc_ctrl_point2 = [2, -5, 25]
-loc_ctrl_point3 = [5, 0.75, 30]
-blade_vector = [12, 1.5]  # offset between the two endpoints
+loc_ctrl_point2 = [-2, -5, 25]
+loc_ctrl_point3 = [-5, 0.75, 30]
+blade_vector = [-12, 1.5]  # offset between the two endpoints
 
 # Angle of Attack
 a_AoA = 0
 b_AoA = 0
 c_AoA = 0
-d_AoA = 0.2 * np.pi
-e_AoA = np.pi
+d_AoA = np.pi
+e_AoA = 0
 
 # Scaling Params
 a_scX = 1
@@ -61,10 +57,8 @@ e_scY = 2
 
 apply_thickness_normal = False
 
-print("Parameters set. Starting symbolic definition...")
 
 # ---------------------------------------- PT 1: Define the 2D shape (Unchanged) ----------------------------------------
-# ... (This entire section is identical to your code) ...
 
 yt = 5 * thickness * (0.2969 * sp.sqrt(t) - 0.1260 * t - 0.3516 * t**2 + 0.2843 * t**3 - 0.1036 * t**4)
 yc = sp.Piecewise(((m / p**2) * (2 * p * t - t**2), t <= p), ((m / (1 - p)**2) * ((1 - 2 * p) + 2 * p * t - t**2), t > p))
@@ -92,8 +86,14 @@ X_rotated = XY_rotated[0]
 Y_rotated = XY_rotated[1]
 scale_x = a_scX * s**4 + b_scX * s**3 + c_scX * s**2 + d_scX * s + e_scX
 scale_y = a_scY * s**4 + b_scY * s**3 + c_scY * s**2 + d_scY * s + e_scY
-# scale_x = 0.2 + (scale_x - 0.2) * sp.Heaviside(0.99 - s) * sp.Heaviside(s - 0.01)
-# scale_y = 0.2 + (scale_y - 0.2) * sp.Heaviside(0.99 - s) * sp.Heaviside(s - 0.01)
+
+# make the scaling go to ~0.1 around endpoints
+clamp_scaling_ends = -1 \
+    + 1/(1 + sp.exp(-200*(s - 0.01))) \
+    + 1/(1 + sp.exp(-200*(0.99 - s)))
+scale_x *= clamp_scaling_ends
+scale_y *= clamp_scaling_ends
+
 X_rotated_scaled = X_rotated * scale_x
 Y_rotated_scaled = Y_rotated * scale_y
 
@@ -102,32 +102,43 @@ Y_rotated_scaled = Y_rotated * scale_y
 t_vals_cad = np.linspace(t_domain[0], t_domain[1], t_resolution_cad, endpoint=False)
 s_vals_cad = np.linspace(s_domain[0], s_domain[1], s_resolution_cad, endpoint=False)
 
-# ------------------------------------------ PT 3: Create the 3D curve (Unchanged) ------------------------------------------
-# ... (This entire section is identical to your code) ...
+# ------------------------------------------ PT 3: Create the 3D curve ------------------------------------------
 
 scale0 = float(max(scale_x.subs(s, 0), scale_y.subs(s, 0))) 
 scale1 = float(max(scale_x.subs(s, 1), scale_y.subs(s, 1))) 
 scale = max(scale0, scale1)
+
 inset_ratio = 4/8
+
 blade_hub_radius = inset_ratio * hub_radius
+
+# Pick first point
 ctrl_point1 = [blade_hub_radius, 0, hub_length / 2 - 1]
+
+# For last control point, offset by blade_vector
+# blade_vector[0] represents a movement along the circumference of the hub
+# blade_vector[1] represents a movement along the z-axis
 disp_theta = blade_vector[0] / (2 * np.pi * blade_hub_radius) * 2 * np.pi
 ctrl_point4 = [blade_hub_radius * np.cos(disp_theta), blade_hub_radius * np.sin(disp_theta), -1 * blade_vector[1]]
+
+# Define the control points for the curve (converting to cylindrical and translating)
 disp_theta2 = loc_ctrl_point2[0] / (2 * np.pi * blade_hub_radius) * 2 * np.pi
 loc2_radius = blade_hub_radius + loc_ctrl_point2[2]
 ctrl_point2 = [loc2_radius * np.cos(disp_theta2), loc2_radius * np.sin(disp_theta2), -1 * loc_ctrl_point2[1]]
+
 disp_theta3 = loc_ctrl_point3[0] / (2 * np.pi * blade_hub_radius) * 2 * np.pi
 loc3_radius = blade_hub_radius + loc_ctrl_point3[2]
 ctrl_point3 = [loc3_radius * np.cos(disp_theta3), loc3_radius * np.sin(disp_theta3), -1 * loc_ctrl_point3[1]]
-control_points = np.array([ctrl_point1, ctrl_point2, ctrl_point3, ctrl_point4])
+
+control_points = np.array([ctrl_point1, ctrl_point2, ctrl_point3, ctrl_point4])  # [x, y, z]
+
+# could add weights as a parameter, but for now just use uniform weights
 weights = [1, 1, 1, 1]
 x_curve, y_curve, z_curve = nurbs_gen(s, control_points, weights, to_plot=False)
 
 print("Symbolic centerline defined.")
 
-# -------------------------------------- PT 4: Frenet-Serret frame along curve (Unchanged) --------------------------------------
-# ... (This entire section is identical to your code) ...
-
+# -------------------------------------- PT 4: Frenet-Serret frame along curve --------------------------------------
 dx_ds = sp.diff(x_curve, s)
 dy_ds = sp.diff(y_curve, s)
 dz_ds = sp.diff(z_curve, s)
@@ -143,9 +154,9 @@ X_final = C[0] + X_rotated_scaled * N[0] + Y_rotated_scaled * B[0]
 Y_final = C[1] + X_rotated_scaled * N[1] + Y_rotated_scaled * B[1]
 Z_final = C[2] + X_rotated_scaled * N[2] + Y_rotated_scaled * B[2]
 
-print("Symbolic surface equations defined. Lambdifying...")
+print("Symbolic surface equations defined.")
 
-# -------------------------------------- PT 5: Lambdify Symbolic Expressions (Unchanged) --------------------------------------
+# -------------------------------------- PT 5: Lambdify Symbolic Expressions --------------------------------------
 
 C_func = sp.lambdify(s, C, 'numpy')
 N_func = sp.lambdify(s, N, 'numpy')
@@ -176,14 +187,13 @@ for s_val in s_vals_cad:
     # 3. Create a list of 3D CadQuery Vectors
     points_3d = []
     for (x_l, y_l) in zip(x_local, y_local):
-        # Final 3D point = C + x_local * N + y_local * B
+        # final 3D point = C + x_local * N + y_local * B
         pt_3d = C_vec + x_l * N_vec + y_l * B_vec
         points_3d.append(cq.Vector(pt_3d[0], pt_3d[1], pt_3d[2]))
 
-    # 4. NOW we manually close the loop
+    # manuallyt close the loop
     points_3d.append(points_3d[0])
 
-    # 5. --- DEBUGGING BLOCK ---
     # Check for NaNs
     np_points = np.array([(v.x, v.y, v.z) for v in points_3d])
     if np.isnan(np_points).any():
@@ -197,7 +207,6 @@ for s_val in s_vals_cad:
         if (points_3d[i] - points_3d[i+1]).Length < 1e-7:
             duplicates += 1
             
-    # Check closure distance
     closure_dist = (points_3d[0] - points_3d[-1]).Length
     
     # Print rib info
@@ -209,30 +218,24 @@ for s_val in s_vals_cad:
 
     # 6. --- TRY TO BUILD ---
     try:
-        # 6a. Create a smooth B-Spline edge from the 3D points
+        # create a smooth B-Spline edge
         spline_edge = cq.Edge.makeSpline(points_3d)
         
-        # 6b. Use a Workplane as a context to "promote" the edge to a wire
+        # workplane to create a wire
         wire = cq.Wire.assembleEdges([spline_edge])
 
-        # 6c. Add the wire to our list for lofting
         rib_wires.append(wire)
 
+    # duplicate points, etc cause errors
     except Exception as e:
         print("\n" + "!"*20 + " CRASH DETECTED " + "!"*20)
-        print(f"Failed at s_val = {s_val}")
-        print(f"Error: {e}")
-        print("This is almost certainly due to degenerate geometry (all points are identical).")
-        print("See the 'Likely Fix' section in my response.")
         print("Offending points (first 5):")
         for i, p in enumerate(points_3d[:5]):
-             print(f"  {i}: ({p.x:8.4f}, {p.y:8.4f}, {p.z:8.4f})")
+             print(f" {i}: ({p.x:8.4f}, {p.y:8.4f}, {p.z:8.4f})")
         print("Offending points (last 5):")
         for i, p in enumerate(points_3d[-5:]):
-             print(f"  {len(points_3d)-5+i}: ({p.x:8.4f}, {p.y:8.4f}, {p.z:8.4f})")
-        print("!"*58 + "\n")
+             print(f" {len(points_3d)-5+i}: ({p.x:8.4f}, {p.y:8.4f}, {p.z:8.4f})")
         
-        # Stop the script so we can fix it
         raise e
 
 # 8. Create the lofted solid from all the rib wires
@@ -242,10 +245,9 @@ else:
     blade_solid = cq.Solid.makeLoft(rib_wires)
     print(f"Blade solid created in {time.time() - start_time:.2f} seconds.")
 
-# --------------------------------------- PT 7: Build Hub and Assemble Propeller (NEW: CadQuery) ---------------------------------------
+# --------------------------------------- PT 7: Build Hub and Assemble Propeller with CadQuery ---------------------------------------
 
-# 1. Create the hub solid
-# We'll create it centered at the origin, matching your math
+# center at origin along z
 hub_solid = cq.Solid.makeCylinder(
     hub_radius,
     hub_length,
@@ -253,48 +255,38 @@ hub_solid = cq.Solid.makeCylinder(
     dir=cq.Vector(0, 0, 1)                # Extrusion direction
 )
 
-# 2. Assemble the propeller using Boolean Fuses (Unions)
-# Start with the hub as the base
 propeller_solid = hub_solid
 
-print(f"Hub created. Assembling {num_blades} blades...")
-
 for i in range(num_blades):
-    # 3. Define the rotation angle
+
     angle_deg = i * (360.0 / num_blades)
     
-    # 4. Create a rotated copy of the blade
+    # rotated copy of the blade
     blade_copy = blade_solid.rotate(
         (0, 0, 0),       # rotation center
         (0, 0, 1),       # rotation axis
         angle_deg        # angle in degrees
     )
     
-    # 5. Fuse the rotated blade to the main propeller solid
     propeller_solid = propeller_solid.fuse(blade_copy)
-    
     print(f"Blade {i+1}/{num_blades} fused.")
 
 print("Assembly complete.")
 
-# --------------------------------------- PT 8: Export to STEP File (NEW: Scaled) ---------------------------------------
+# --------------------------------------- PT 8: Export ---------------------------------------
 
-print(f"Applying global scale factor of {global_scale}...")
-
-# Apply the scaling operation to the final solid
 scaled_propeller_solid = propeller_solid.scale(global_scale)
 
-# I recommend changing the output filename to reflect the change
-output_filename = "toroidal_propeller_scaled.step"
+output_filename = "toroidal_propeller.step"
 
 # Use CadQuery's built-in exporter
 try:
     cq.exporters.export(
-        scaled_propeller_solid,  # <-- Export the new scaled object
+        scaled_propeller_solid,  
         output_filename,
         "STEP"
     )
-    print(f"Successfully exported SCALED STEP file to: {output_filename}")
+    print(f"Successfully exported STEP file to: {output_filename}")
 
 except Exception as e:
     print(f"Failed to export STEP file: {e}")
