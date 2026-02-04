@@ -14,8 +14,6 @@ from union_with_bpy import union_stl_files
 t, s = sp.symbols('t s', real=True)
 
 # Domain and resolution
-s_domain = [0, 1]  # Domain for the curve parameter s
-t_domain = [0, 2]  # Domain for the shape parameter t
 s_resolution = 100  # Resolution for discretizing the curve parameter s
 t_resolution = 100  # Resolution for discretizing the shape parameter t
 hub_resolution = 50 # Resolution for discretizing the hub (needs to equal s_resolution for matplotlib viz)
@@ -25,40 +23,15 @@ apply_thickness_normal = False      # Apply airfoil thickness normal to camber l
 close_cylinder = True               # Close the cylinder mesh for the hub with top and bottom faces
 plot_matplotlib = True             # Plot the propeller in matplotlib
 
-# Modifiable parameters
-hub_radius = 5  # Radius of the cylindrical hub
-hub_length = 20  # Length of the cylindrical hub
-num_blades = 3  # Number of blades
-
-# Airfoil Params
-m = 0.04
-p = 0.4
-thickness = .75
-
-# Centerline Params
-loc_ctrl_point2 = [-2, -5, 25]
-loc_ctrl_point3 = [-5, 0.75, 30]
-blade_vector = [-12, 1.5]  # offset between the two endpoints
-
-# Angle of Attack
-a_AoA = 0
-b_AoA = 0
-c_AoA = 0
-d_AoA = np.pi
-e_AoA = 0
-
-# Scaling Params
-a_scX = 1
-b_scX = 0
-c_scX = -2
-d_scX = 2.5
-e_scX = 3
-
-a_scY = 0
-b_scY = 0
-c_scY = -1
-d_scY = 0
-e_scY = 2
+from config_toroidal import (
+    s_domain, t_domain,
+    hub_radius, hub_length, num_blades,
+    m, p, thickness,
+    loc_ctrl_point2, loc_ctrl_point3, blade_vector,
+    a_AoA, b_AoA, c_AoA, d_AoA, e_AoA,
+    a_scX, b_scX, c_scX, d_scX, e_scX,
+    a_scY, b_scY, c_scY, d_scY, e_scY,
+)
 
 param_set = dict(
     s_domain=s_domain, t_domain=t_domain, s_resolution=s_resolution, t_resolution=t_resolution,
