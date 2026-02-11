@@ -502,7 +502,6 @@ def export_best_as_step(best_params, filename="optimized_propeller.step"):
     # tell me and I’ll paste it in fully.
 
     print("NOTE: export_best_as_step is a stub in this fast script.")
-    print("Main point: do CAD export once, not in the loop.")
     print("Best params:", best_params)
 
 

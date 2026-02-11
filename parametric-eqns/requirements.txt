@@ -10,3 +10,4 @@ bpy==4.0.0
 cadquery==2.5.2
 cadquery-ocp==7.7.2
 trimesh==4.9.0
+ipywidgets==8.1.8
