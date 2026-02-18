@@ -13,7 +13,7 @@ t_resolution_cad = 60
 # Global scaling / hub / blades
 global_scale = 7.5
 hub_radius   = 5
-hub_length   = 20
+hub_length   = 18.0
 num_blades   = 3
 
 # Airfoil params
@@ -22,29 +22,29 @@ p         = 0.4
 thickness = 0.75
 
 # Centerline control points / blade vector
-loc_ctrl_point2 = [-2, -5, 25]
+loc_ctrl_point2 = [-0.25, 14.0, 35.50000000000001]
 loc_ctrl_point3 = [-5, 0.75, 30]
-blade_vector    = [-12.5, 1.5]  # [circumferential_offset, z_offset]
+blade_vector    = [-12.500000000000028, 16.25]  # [circumferential_offset, z_offset]
 
 # Angle of attack polynomial coefficients
-a_AoA = 0
-b_AoA = 0
-c_AoA = 0
-d_AoA = np.pi
-e_AoA = 0
+a_AoA = -0.01592653589793258
+b_AoA = -0.01592653589793258
+c_AoA = -0.01592653589793258
+d_AoA = 3.134073464102066
+e_AoA = -0.01592653589793258
 
 # Scaling polynomials (x / y)
 a_scX = 1
 b_scX = 0
 c_scX = -2
-d_scX = 1
-e_scX = 3
+d_scX = 6.100000000000001
+e_scX = 5.710000000000001
 
 a_scY = 0
 b_scY = 0
 c_scY = -1
 d_scY = 0
-e_scY = 2
+e_scY = 2.01
 
 # Flags
 apply_thickness_normal = False
