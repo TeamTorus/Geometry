@@ -1,0 +1,112 @@
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Packaging/build
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+pip-wheel-metadata/
+
+# Testing/coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Type checking / linting
+.mypy_cache/
+.pyre/
+.ruff_cache/
+
+# IDEs
+.vscode/
+.idea/
+
+# Environment/secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+__init__.py
+
+
+# =========================
+# MATLAB
+# =========================
+
+# Autosave / backup
+*.asv
+*.m~
+*.autosave
+
+# MATLAB temporary files
+*.mex*
+*.slxc
+*.sldd.tmp
+*.slxc.lock
+*.mlappinstall
+*.mltbx
+
+# Simulink generated/cache files
+slprj/
+sccprj/
+*.slxc
+*.mdl.r20*
+*.slx.r20*
+
+# Code generation
+codegen/
+*_ert_rtw/
+*_grt_rtw/
+*_rtw/
+rtwreport/
+
+# MEX/build outputs
+*.mexw64
+*.mexw32
+*.mexa64
+*.mexmaci64
+*.o
+*.obj
+*.so
+*.dll
+*.dylib
+*.lib
+*.exp
+
+# MATLAB preferences/history
+history.m
+matlab_crash_dump.*
+java.log.*
+
+# Figures/data outputs — uncomment if you do not want generated data committed
+# *.fig
+# *.mat
+# *.csv
+# *.xlsx
+# *.png
+# *.jpg
